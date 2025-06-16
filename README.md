@@ -1,6 +1,6 @@
 # pyfinder
 
-This project now includes a simple Django API for searching user records in two SQLite databases.
+This project exposes a Django API for searching user records stored in two SQLite databases. The search logic mirrors the original application while using Django views.
 
 ## Running
 
@@ -12,4 +12,4 @@ cd django_api
 python manage.py runserver
 ```
 
-The API exposes `/api/search?query=<name>` returning JSON results merged from both databases.
+The API exposes `/api/search` and accepts the query parameters `name`, `cpf` and `date`. At least one of these parameters must be provided. Results from both databases are merged and returned as JSON.

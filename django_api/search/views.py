@@ -1,27 +1,29 @@
-from django.conf import settings
+"""Views for search API."""
+
 from django.http import JsonResponse
 from django.db import connections
 from django.views import View
 
+from .utils import User, execute_query
+
 
 class SearchView(View):
     def get(self, request):
-        query = request.GET.get('query', '')
-        if not query:
-            return JsonResponse({'error': 'Query parameter is required.'}, status=400)
+        user = User(
+            name=request.GET.get("name", ""),
+            cpf=request.GET.get("cpf", ""),
+            date=request.GET.get("date", ""),
+        )
 
-        results = []
-        for alias in ('default', 'secondary'):
-            cursor = connections[alias].cursor()
-            cursor.execute(
-                "SELECT name, cpf, gender, date FROM cpf WHERE name LIKE ? LIMIT 100",
-                [f'%{query}%']
+        if not any([user.name, user.cpf, user.date]):
+            return JsonResponse(
+                {"error": "At least one of name, cpf or date must be provided."},
+                status=400,
             )
-            for row in cursor.fetchall():
-                results.append({
-                    'name': row[0],
-                    'cpf': row[1],
-                    'gender': row[2],
-                    'date': row[3],
-                })
-        return JsonResponse({'results': results})
+
+        results: list[dict] = []
+        for alias in ("default", "secondary"):
+            with connections[alias].cursor() as cursor:
+                results.extend(execute_query(cursor, user))
+
+        return JsonResponse({"results": results})
