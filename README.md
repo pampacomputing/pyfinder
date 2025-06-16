@@ -7,9 +7,37 @@ This project exposes a Django API for searching user records stored in two SQLit
 Install the requirements and run the development server:
 
 ```bash
-pip install -r requirements.txt
+./install.sh
 cd django_api
 python manage.py runserver
 ```
 
-The API exposes `/api/search` and accepts the query parameters `name`, `cpf` and `date`. At least one of these parameters must be provided. Results from both databases are merged and returned as JSON.
+The API exposes `/api/search` and expects a POST request with the following JSON structure:
+
+```json
+{
+  "request_id": 1,
+  "user_data": {
+    "name": "John",
+    "cpf": "12345678901",
+    "gender": "M",
+    "date": "1990-01-01"
+  }
+}
+```
+
+At least one of `name`, `cpf` or `date` must be provided. The response includes the `response_id` and a list of matching users:
+
+```json
+{
+  "response_id": 1,
+  "user_data": [
+    {
+      "name": "John",
+      "cpf": "12345678901",
+      "gender": "Male",
+      "date": "1990-01-01"
+    }
+  ]
+}
+```
