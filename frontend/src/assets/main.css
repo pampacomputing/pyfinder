@@ -1,0 +1,19 @@
+/* main.css */
+#app {
+  max-width: 1280px;   /* ← limita a largura  */
+  margin: 0 auto;      /* ← centraliza        */
+  padding: 2rem;       /* ← 32 px de cada lado*/
+}
+
+@media (min-width: 1024px) {
+  body {
+    display: flex;         /* ← sobrepõe layout */
+    place-items: center;
+  }
+
+  #app {
+    display: grid;         /* ← vira grid 1fr 1fr (duas colunas) */
+    grid-template-columns: 1fr 1fr;
+    padding: 0 2rem;       /* ← volta o padding lateral          */
+  }
+}

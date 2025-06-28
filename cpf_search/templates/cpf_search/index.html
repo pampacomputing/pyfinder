@@ -1,0 +1,120 @@
+{% extends 'cpf_search/base.html' %}
+
+{% block title %}CPF Search - PyFinder Django{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>CPF Search</h5>
+            </div>
+            <div class="card-body">
+                <form id="searchForm">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Name</label>
+                        <input type="text" class="form-control" id="name" name="name" placeholder="Enter name to search">
+                    </div>
+                    <div class="mb-3">
+                        <label for="cpf" class="form-label">CPF</label>
+                        <input type="text" class="form-control" id="cpf" name="cpf" placeholder="Enter CPF">
+                    </div>
+                    <div class="mb-3">
+                        <label for="date" class="form-label">Birth Date</label>
+                        <input type="date" class="form-control" id="date" name="date">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Search</button>
+                    <button type="button" class="btn btn-secondary" id="clearBtn">Clear</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Search Results</h5>
+            </div>
+            <div class="card-body">
+                <div id="loading" class="text-center" style="display: none;">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+                <div id="results"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    $('#searchForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        const name = $('#name').val().trim();
+        const cpf = $('#cpf').val().trim();
+        const date = $('#date').val().trim();
+        
+        if (!name && !cpf && !date) {
+            alert('Please provide at least one search criteria');
+            return;
+        }
+        
+        $('#loading').show();
+        $('#results').empty();
+        
+        $.ajax({
+            url: '{% url "cpf_search:search_cpf" %}',
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+            },
+            data: {
+                name: name,
+                cpf: cpf,
+                date: date,
+                request_id: Date.now()
+            },
+            success: function(response) {
+                $('#loading').hide();
+                displayResults(response.user_data);
+            },
+            error: function(xhr, status, error) {
+                $('#loading').hide();
+                const errorMsg = xhr.responseJSON ? xhr.responseJSON.error : 'An error occurred';
+                $('#results').html('<div class="alert alert-danger">' + errorMsg + '</div>');
+            }
+        });
+    });
+    
+    $('#clearBtn').on('click', function() {
+        $('#searchForm')[0].reset();
+        $('#results').empty();
+    });
+    
+    function displayResults(users) {
+        if (users.length === 0) {
+            $('#results').html('<div class="alert alert-info">No results found</div>');
+            return;
+        }
+        
+        let html = '<div class="table-responsive"><table class="table table-striped"><thead><tr><th>Name</th><th>CPF</th><th>Gender</th><th>Birth Date</th></tr></thead><tbody>';
+        
+        users.forEach(function(user) {
+            html += '<tr>';
+            html += '<td>' + (user.name || '') + '</td>';
+            html += '<td>' + (user.cpf || '') + '</td>';
+            html += '<td>' + (user.date || '') + '</td>';
+            html += '</tr>';
+        });
+        
+        html += '</tbody></table></div>';
+        html += '<div class="mt-2"><small class="text-muted">Found ' + users.length + ' result(s)</small></div>';
+        
+        $('#results').html(html);
+    }
+});
+</script>
+{% endblock %}
