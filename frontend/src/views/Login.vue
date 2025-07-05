@@ -19,6 +19,9 @@
               <div class="d-grid">
                 <button type="submit" class="btn btn-primary">Login</button>
               </div>
+              <div class="d-grid mt-2">
+                <button type="button" class="btn btn-secondary" @click="goToRegister">Sign In</button>
+              </div>
             </form>
             <p v-if="error" class="text-danger mt-3 text-center">{{ error }}</p>
           </div>
@@ -53,6 +56,9 @@ export default {
       } catch (e) {
         this.error = 'Invalid credentials'
       }
+    },
+    goToRegister() {
+      this.$router.push('/register')
     }
   }
 }

@@ -33,46 +33,124 @@ def search_cpf(request):
         # Extract search parameters from request
         name = request.data.get('name', '').strip()
         cpf = request.data.get('cpf', '').strip()
+        cnpj = request.data.get('cnpj', '').strip()
         date = request.data.get('birthdate', '').strip()
         request_id = request.data.get('request_id', 1)
         
-        # Build query conditions
-        conditions = Q()
-        
-        if name:
-            conditions &= Q(nome__icontains=name)
-        
-        if cpf:
-            # Clean CPF (remove dots and dashes)
-            clean_cpf = cpf.replace('.', '').replace('-', '')
-            conditions &= Q(cpf__exact=clean_cpf)
-        
-        if date:
-            conditions &= Q(nasc__exact=date)
-        
-        # Function to execute the database query in a separate thread
-        def execute_query():
-            # Ensure a fresh connection for this thread
-            connections.close_all()
-            return list(Cpf.objects.filter(conditions)[:1000])
-
-        # Execute query in a thread pool
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(execute_query)
-            results = future.result()
-        
-        # Serialize results
-        serializer = CpfSerializer(results, many=True)
-        
-        # Format response similar to original format
         response_data = {
             'response_id': request_id,
-            'user_data': [{
+            'user_data': [],
+            'company_data': [],
+            'partner_data': []
+        }
+
+        if cpf:
+            clean_cpf = cpf.replace('.', '').replace('-', '')
+            cpf_conditions = Q(cpf__exact=clean_cpf)
+            if name:
+                cpf_conditions &= Q(nome__icontains=name)
+            if date:
+                cpf_conditions &= Q(nasc__exact=date)
+
+            def execute_cpf_query():
+                connections.close_all()
+                return list(Cpf.objects.filter(cpf_conditions)[:1000])
+
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(execute_cpf_query)
+                cpf_results = future.result()
+            
+            cpf_serializer = CpfSerializer(cpf_results, many=True)
+            response_data['user_data'] = [{
                 'name': item['nome'],
                 'cpf': item['cpf'],
                 'date': str(item['nasc']) if item['nasc'] else ''
-            } for item in serializer.data]
-        }
+            } for item in cpf_serializer.data]
+
+        if cnpj:
+            clean_cnpj = cnpj.replace('.', '').replace('/', '').replace('-', '')
+            
+            def execute_cnpj_query():
+                connections.close_all()
+                return list(Empresas.objects.using('cnpj_db').filter(cnpj__exact=clean_cnpj)[:1000])
+
+            def execute_socios_query():
+                connections.close_all()
+                return list(Socios.objects.using('cnpj_db').filter(cnpj_basico__exact=clean_cnpj[:8])[:1000])
+
+            with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+                cnpj_future = executor.submit(execute_cnpj_query)
+                socios_future = executor.submit(execute_socios_query)
+                
+                cnpj_results = cnpj_future.result()
+                socios_results = socios_future.result()
+
+            response_data['company_data'] = [{
+                'cnpj': item.cnpj,
+                'razao_social': item.razao_social,
+                'nome_fantasia': item.nome_fantasia,
+                'situacao_cadastral': item.situacao_cadastral,
+                'data_situacao_cadastral': item.data_situacao_cadastral,
+                'motivo_situacao_cadastral': item.motivo_situacao_cadastral,
+                'cod_nat_juridica': item.cod_nat_juridica,
+                'data_inicio_ativ': item.data_inicio_ativ,
+                'cnae_fiscal': item.cnae_fiscal,
+                'tipo_logradouro': item.tipo_logradouro,
+                'logradouro': item.logradouro,
+                'numero': item.numero,
+                'complemento': item.complemento,
+                'bairro': item.bairro,
+                'cep': item.cep,
+                'uf': item.uf,
+                'cod_municipio': item.cod_municipio,
+                'municipio': item.municipio,
+                'ddd_1': item.ddd_1,
+                'telefone_1': item.telefone_1,
+                'ddd_2': item.ddd_2,
+                'telefone_2': item.telefone_2,
+                'ddd_fax': item.ddd_fax,
+                'fax': item.fax,
+                'email': item.email,
+                'qualif_resp': item.qualif_resp,
+                'capital_social': item.capital_social,
+                'porte': item.porte,
+                'opc_simples': item.opc_simples,
+                'data_opc_simples': item.data_opc_simples,
+                'data_exc_simples': item.data_exc_simples,
+                'opc_mei': item.opc_mei,
+                'situacao_especial': item.situacao_especial,
+                'data_sit_especial': item.data_sit_especial,
+            } for item in cnpj_results]
+
+            response_data['partner_data'] = [{
+                'cnpj_basico': item.cnpj_basico,
+                'id_socio': item.id_socio,
+                'nome_socio': item.nome_socio,
+                'cpf_cnpj_socio': item.cpf_cnpj_socio,
+                'cod_qualif_socio': item.cod_qualif_socio,
+                'data_entrada_sociedade': item.data_entrada_sociedade,
+                'pais': item.pais,
+                'repr_legal': item.repr_legal,
+                'nome_repr': item.nome_repr,
+                'cod_qualif_repr_legal': item.cod_qualif_repr_legal,
+                'faixa_etaria': item.faixa_etaria,
+            } for item in socios_results]
+        
+        # Data correlation (if both CPF and CNPJ are provided)
+        if cpf and cnpj:
+            # Example: Find if any CPF search result is a partner in the CNPJ search result
+            # This is a basic example; real correlation might be more complex
+            correlated_data = []
+            cpf_numbers_in_results = {item['cpf'] for item in response_data['user_data']}
+            for partner in response_data['partner_data']:
+                if partner['cpf_cnpj_socio'] in cpf_numbers_in_results:
+                    correlated_data.append({
+                        'cpf_info': next(item for item in response_data['user_data'] if item['cpf'] == partner['cpf_cnpj_socio']),
+                        'partner_info': partner
+                    })
+            response_data['correlated_data'] = correlated_data
+        
+        return Response(response_data, status=status.HTTP_200_OK)
         
         return Response(response_data, status=status.HTTP_200_OK)
         

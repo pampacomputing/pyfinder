@@ -1,4 +1,3 @@
-
 """
 Django settings for pyfinder_django project.
 
@@ -91,7 +90,11 @@ import os
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': 'C:\\Users\\danie\\Documents\\Projects\\db\\basecpf.db',
+        'NAME': 'C:/Users/danie/Documents/Projects/db/basecpf.db',
+    },
+    'cnpj_db': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': 'C:/Users/danie/Documents/Projects/db/CNPJ.db',
     }
 }
 
@@ -159,3 +162,6 @@ ACCOUNT_UNIQUE_EMAIL = True
 ACCOUNT_USERNAME_REQUIRED = False
 ACCOUNT_EMAIL_VERIFICATION = 'optional'
 LOGIN_REDIRECT_URL = '/'
+
+# Email backend for development
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
