@@ -24,6 +24,8 @@
                   />
                 </div>
 
+                
+
                 <div class="col-sm-6">
                   <label for="cnpj" class="form-label">CNPJ</label>
                   <input
@@ -46,14 +48,10 @@
                   />
                 </div>
 
-                <div class="col-sm-6 col-md-4">
-                  <label for="birthdate" class="form-label">Birthdate</label>
-                  <input
-                    id="birthdate"
-                    type="date"
-                    class="form-control"
-                    v-model="searchCriteria.birthdate"
-                  />
+                
+                <div class="col-12">
+                  <button type="submit" class="btn btn-primary me-2">Search CPF</button>
+                  <button type="button" class="btn btn-info" @click="performCnpjSearch">Search CNPJ</button>
                 </div>
               </div>
             </form>
@@ -95,6 +93,8 @@
                     <tr
                       v-for="(result, idx) in pagedCpfResults"
                       :key="result.cpf"
+                      @click="selectCpfResult(result)"
+                      :class="{ 'table-active': selectedCpfResult === result }"
                     >
                       <td>{{ (cpfPage - 1) * perPage + idx + 1 }}</td>
                       <td>{{ result.cpf }}</td>
@@ -129,82 +129,145 @@
             </div>
 
             <!-- CNPJ Company Data -->
-            <div v-if="results.company_data && results.company_data.length > 0" class="mt-4">
+            <div v-else-if="results.company_data && Object.keys(results.company_data).length > 0" class="mt-4">
               <h5 class="card-title p-3">Company Data (CNPJ)</h5>
               <div class="table-container table-responsive">
                 <table class="table table-dark table-striped table-hover m-0">
                   <thead>
                     <tr>
-                      <th>CNPJ</th>
+                      <th>CNPJ Básico</th>
                       <th>Razão Social</th>
-                      <th>Nome Fantasia</th>
-                      <th>Situação Cadastral</th>
-                      <th>Endereço</th>
-                      <th>Telefone</th>
-                      <th>Email</th>
+                      <th>Natureza Jurídica</th>
+                      <th>Qualificação Responsável</th>
+                      <th>Porte Empresa</th>
+                      <th>Ente Federativo Responsável</th>
+                      <th>Capital Social</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="company in results.company_data" :key="company.cnpj">
-                      <td>{{ company.cnpj }}</td>
-                      <td>{{ company.razao_social }}</td>
-                      <td>{{ company.nome_fantasia }}</td>
-                      <td>{{ company.situacao_cadastral }}</td>
-                      <td>{{ company.logradouro }}, {{ company.numero }} - {{ company.bairro }}, {{ company.municipio }} - {{ company.uf }}</td>
-                      <td>{{ company.ddd_1 }} {{ company.telefone_1 }}</td>
-                      <td>{{ company.ddd_2 }} {{ company.telefone_2 }}</td>
-                      <td>{{ company.email }}</td>
+                    <tr
+                      @click="selectCompany(results.company_data)"
+                      :class="{ 'table-active': selectedCompanyData === results.company_data }"
+                    >
+                      <td>{{ results.company_data.cnpj_basico }}</td>
+                      <td>{{ results.company_data.razao_social }}</td>
+                      <td>{{ results.company_data.natureza_juridica }}</td>
+                      <td>{{ results.company_data.qualificacao_responsavel }}</td>
+                      <td>{{ results.company_data.porte_empresa }}</td>
+                      <td>{{ results.company_data.ente_federativo_responsavel }}</td>
+                      <td>{{ results.company_data.capital_social }}</td>
                     </tr>
                   </tbody>
                 </table>
               </div>
             </div>
 
-            <!-- CNPJ Partner Data -->
-            <div v-if="results.partner_data && results.partner_data.length > 0" class="mt-4">
-              <h5 class="card-title p-3">Partner Data (CNPJ)</h5>
+            <!-- CNPJ Partner Data (Subtable) -->
+            <div v-if="selectedCompanyData && selectedCompanyData.partners_data && selectedCompanyData.partners_data.length > 0" class="mt-4">
+              <h5 class="card-title p-3">Partner Data for {{ selectedCompanyData.razao_social }}</h5>
               <div class="table-container table-responsive">
                 <table class="table table-dark table-striped table-hover m-0">
                   <thead>
                     <tr>
-                      <th>Nome Sócio</th>
                       <th>CPF/CNPJ Sócio</th>
+                      <th>Nome Sócio</th>
+                      <th>Data de Nascimento</th>
+                      <th>Gênero</th>
+                      <th>Qualificação Sócio</th>
                       <th>Data Entrada Sociedade</th>
+                      <th>País</th>
+                      <th>Representante Legal</th>
+                      <th>Nome Representante</th>
+                      <th>Qualificação Representante Legal</th>
+                      <th>Faixa Etária</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="partner in results.partner_data" :key="partner.cpf_cnpj_socio">
-                      <td>{{ partner.nome_socio }}</td>
-                      <td>{{ partner.cpf_cnpj_socio }}</td>
+                    <tr v-for="(partner, partnerIdx) in selectedCompanyData.partners_data" :key="partnerIdx">
+                      <td>{{ partner.cpf }}</td>
+                      <td>{{ partner.nome }}</td>
+                      <td>{{ partner.data_nascimento }}</td>
+                      <td>{{ partner.genero }}</td>
+                      <td>{{ partner.qualificacao_socio }}</td>
                       <td>{{ partner.data_entrada_sociedade }}</td>
+                      <td>{{ partner.pais }}</td>
+                      <td>{{ partner.representante_legal }}</td>
+                      <td>{{ partner.nome_representante }}</td>
+                      <td>{{ partner.qualificacao_representante_legal }}</td>
+                      <td>{{ partner.faixa_etaria }}</td>
                     </tr>
                   </tbody>
                 </table>
               </div>
             </div>
 
-            <!-- Correlated Data -->
-            <div v-if="results.correlated_data && results.correlated_data.length > 0" class="mt-4">
-              <h5 class="card-title p-3">Correlated Data (CPF & CNPJ)</h5>
-              <div class="table-container table-responsive">
-                <table class="table table-dark table-striped table-hover m-0">
-                  <thead>
-                    <tr>
-                      <th>CPF</th>
-                      <th>Nome CPF</th>
-                      <th>CNPJ Sócio</th>
-                      <th>Nome Sócio</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="correlated in results.correlated_data" :key="correlated.cpf_info.cpf + correlated.partner_info.cpf_cnpj_socio">
-                      <td>{{ correlated.cpf_info.cpf }}</td>
-                      <td>{{ correlated.cpf_info.name }}</td>
-                      <td>{{ correlated.partner_info.cnpj_basico }}</td>
-                      <td>{{ correlated.partner_info.nome_socio }}</td>
-                    </tr>
-                  </tbody>
-                </table>
+            <!-- Associated Companies and Partners for Selected CPF -->
+            <div v-if="selectedCpfResult && selectedCpfResult.associated_companies && selectedCpfResult.associated_companies.length > 0" class="mt-4">
+              <h5 class="card-title p-3">Associated Companies for {{ selectedCpfResult.name }}</h5>
+              <div v-for="(companyData, companyIdx) in selectedCpfResult.associated_companies" :key="companyIdx" class="mb-4">
+                <h6>Company {{ companyIdx + 1 }}:</h6>
+                <div class="table-container table-responsive mb-3">
+                  <table class="table table-dark table-striped table-hover m-0">
+                    <thead>
+                      <tr>
+                        <th>CNPJ Básico</th>
+                        <th>Razão Social</th>
+                        <th>Natureza Jurídica</th>
+                        <th>Qualificação Responsável</th>
+                        <th>Porte Empresa</th>
+                        <th>Ente Federativo Responsável</th>
+                        <th>Capital Social</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>{{ companyData.company_details.cnpj_basico }}</td>
+                        <td>{{ companyData.company_details.razao_social }}</td>
+                        <td>{{ companyData.company_details.natureza_juridica }}</td>
+                        <td>{{ companyData.company_details.qualificacao_responsavel }}</td>
+                        <td>{{ companyData.company_details.porte_empresa }}</td>
+                        <td>{{ companyData.company_details.ente_federativo_responsavel }}</td>
+                        <td>{{ companyData.company_details.capital_social }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <h6>Partners for this Company:</h6>
+                <div class="table-container table-responsive">
+                  <table class="table table-dark table-striped table-hover m-0">
+                    <thead>
+                      <tr>
+                        <th>CPF/CNPJ Sócio</th>
+                        <th>Nome Sócio</th>
+                        <th>Data de Nascimento</th>
+                        <th>Gênero</th>
+                        <th>Qualificação Sócio</th>
+                        <th>Data Entrada Sociedade</th>
+                        <th>País</th>
+                        <th>Representante Legal</th>
+                        <th>Nome Representante</th>
+                        <th>Qualificação Representante Legal</th>
+                        <th>Faixa Etária</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="(partner, partnerIdx) in companyData.partners" :key="partnerIdx">
+                        <td>{{ partner.cpf }}</td>
+                        <td>{{ partner.nome }}</td>
+                        <td>{{ partner.data_nascimento }}</td>
+                        <td>{{ partner.genero }}</td>
+                        <td>{{ partner.qualificacao_socio }}</td>
+                        <td>{{ partner.data_entrada_sociedade }}</td>
+                        <td>{{ partner.pais }}</td>
+                        <td>{{ partner.representante_legal }}</td>
+                        <td>{{ partner.nome_representante }}</td>
+                        <td>{{ partner.qualificacao_representante_legal }}</td>
+                        <td>{{ partner.faixa_etaria }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </div>
@@ -212,28 +275,24 @@
       </div>
     </div>
 
-    <!-- ▸ ERROR ------------------------------------------------------------- -->
-    <div v-if="error" class="alert alert-danger mt-4">
-      {{ error }}
-    </div>
-  </div>
+   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, inject } from 'vue'
 import api from '@/services/api'
 import {useRouter} from "vue-router";
 
 /* --- state --------------------------------------------------------------- */
 const searchCriteria = ref({
   cpf: '',
-  cnpj: '', // New CNPJ field
+  cnpj: '', // Re-added CNPJ field
   name: '',
-  birthdate: ''
-})
+});
 const results = ref(null)
 const loading = ref(false)
-const error = ref(null)
+const selectedCpfResult = ref(null) // New state for selected CPF result
+const selectedCompanyData = ref(null) // New state for selected company data
 
 /* --- pagination for CPF results ------------------------------------------ */
 const cpfPage = ref(1) // Renamed from 'page'
@@ -255,18 +314,19 @@ const goToCpfPage = n => { // Renamed from 'goToPage'
 /* --- API ----------------------------------------------------------------- */
 let debounceTimer = null
 
-const performSearch = async () => {
+const performSearch = async (searchType = 'cpf') => {
+  const showErrorModal = inject('showErrorModal');
   // Basic validation for CPF and CNPJ
   const cleanCpf = searchCriteria.value.cpf.replace(/[^0-9]/g, '');
   const cleanCnpj = searchCriteria.value.cnpj.replace(/[^0-9]/g, '');
 
-  if (cleanCpf && cleanCpf.length !== 11) {
-    error.value = 'CPF must have 11 digits.';
+  if (searchType === 'cpf' && cleanCpf && cleanCpf.length !== 11) {
+    showErrorModal(['CPF must have 11 digits.']);
     results.value = null;
     return;
   }
-  if (cleanCnpj && cleanCnpj.length !== 14) {
-    error.value = 'CNPJ must have 14 digits.';
+  if (searchType === 'cnpj' && cleanCnpj && !/^\d{14}$/.test(cleanCnpj)) {
+    showErrorModal(['CNPJ must have 14 digits and contain only numbers.']);
     results.value = null;
     return;
   }
@@ -276,18 +336,28 @@ const performSearch = async () => {
 
   if (!hasSearchCriteria) {
     results.value = null; // Clear previous results
-    error.value = 'Please enter at least one search criterion (CPF, CNPJ, Name, or Birthdate).';
+    showErrorModal(['Please enter at least one search criterion (CPF, CNPJ, or Name).']);
     return;
   }
 
   loading.value = true
-  error.value = null
+  selectedCpfResult.value = null // Clear selected CPF result on new search
+  selectedCompanyData.value = null // Clear selected company data on new search
+  selectedCompanyData.value = null // Clear selected company data on new search
   try {
-    const { data } = await api.search(searchCriteria.value)
-    results.value = data // Store the entire data object
+    let responseData;
+    if (searchType === 'cpf') {
+      const { data } = await api.search({ cpf: cleanCpf, name: searchCriteria.value.name.toUpperCase() });
+      responseData = data;
+    } else if (searchType === 'cnpj') {
+      const { data } = await api.search({ cnpj: cleanCnpj });
+      responseData = data;
+    }
+    
+    results.value = responseData // Store the entire data object
     cpfPage.value = 1 // reset on new search
   } catch (err) {
-    error.value = err.response ? err.response.data.error : err.message
+    showErrorModal(err);
     results.value = null
   } finally {
     loading.value = false
@@ -296,19 +366,35 @@ const performSearch = async () => {
 
 const performSearchNow = () => {
   clearTimeout(debounceTimer)
-  performSearch()
+  performSearch('cpf') // Default to CPF search
+}
+
+const performCnpjSearch = () => {
+  clearTimeout(debounceTimer)
+  performSearch('cnpj')
+}
+
+const selectCpfResult = (result) => {
+  selectedCpfResult.value = result;
+}
+
+const selectCompany = (company) => {
+  selectedCompanyData.value = company;
 }
 
 watch(
   searchCriteria,
   () => {
     clearTimeout(debounceTimer)
-    debounceTimer = setTimeout(performSearch, 500)
+    // Only debounce if both CPF and CNPJ are empty, otherwise search immediately
+    if (!searchCriteria.value.cpf && !searchCriteria.value.cnpj && !searchCriteria.value.name) {
+      debounceTimer = setTimeout(() => performSearch('cpf'), 500);
+    }
   },
   { deep: true }
 )
 
-onMounted(performSearch)
+onMounted(() => performSearch('cpf')) // Initial search on mount, default to CPF
 
 /* ---------- estado de autenticação ------------------------------------ */
 const isAuth = ref(false)

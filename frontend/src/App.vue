@@ -1,14 +1,36 @@
 <template>
-  
-
   <!-- Conteúdo principal -->
   <main class="container-fluid mt-4">
     <RouterView />
   </main>
+
+  <!-- Componente do Modal de Erro -->
+  <ErrorModal
+    :isVisible="isErrorModalVisible"
+    :message="errorMessages"
+    @close="closeErrorModal"
+  />
 </template>
 
 <script setup>
-import { RouterView } from 'vue-router'
+import { ref, provide } from 'vue';
+import { RouterView } from 'vue-router';
+import ErrorModal from './components/ErrorModal.vue';
+
+const errorMessages = ref([]);
+const isErrorModalVisible = ref(false);
+
+const showErrorModal = (messages) => {
+  errorMessages.value = Array.isArray(messages) ? messages : [messages];
+  isErrorModalVisible.value = true;
+};
+
+const closeErrorModal = () => {
+  isErrorModalVisible.value = false;
+  errorMessages.value = [];
+};
+
+provide('showErrorModal', showErrorModal);
 </script>
 
 <style>

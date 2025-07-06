@@ -25,9 +25,12 @@ const apiClient = axios.create({
 
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Token ${token}`;
+    // Only add Authorization header if the request is not for registration
+    if (config.url !== '/auth/registration/') {
+      const token = localStorage.getItem('token');
+      if (token) {
+        config.headers.Authorization = `Token ${token}`;
+      }
     }
     // Add CSRF token for POST requests
     if (config.method === 'post') {
@@ -43,9 +46,51 @@ apiClient.interceptors.request.use(
   }
 );
 
+apiClient.interceptors.response.use(
+  (response) => {
+    return response;
+  },
+  (error) => {
+    if (error.response) {
+      // Erro de resposta da API (status code fora do 2xx)
+      const { data, status } = error.response;
+      let errorMessages = [];
+      if (data && typeof data === 'object') {
+        for (const key in data) {
+          errorMessages.push(`${key}: ${data[key]}`);
+        }
+      }
+      else if (data) {
+        errorMessages.push(data);
+      }
+      else {
+        errorMessages.push(`Error ${status}: ${error.message}`);
+      }
+      // Aqui você precisará injetar o showErrorModal do App.vue
+      // Por enquanto, vamos apenas rejeitar a promessa
+      return Promise.reject(errorMessages);
+    }
+    else if (error.request) {
+      // The request was made but no response was received
+      return Promise.reject(['No response from server. Check your connection.']);
+    }
+    else {
+      // Something happened in setting up the request that triggered an Error
+      return Promise.reject([`Request error: ${error.message}`]);
+    }
+  }
+);
+
 export default {
   search(criteria) {
-    return apiClient.post('/search/', criteria);
+    // Use GET for search with query parameters
+    // Ensure only relevant criteria are sent for CPF/CNPJ search
+    const params = {};
+    if (criteria.cpf) params.cpf = criteria.cpf;
+    if (criteria.cnpj) params.cnpj = criteria.cnpj; // Add CNPJ parameter
+    if (criteria.name) params.name = criteria.name;
+
+    return apiClient.get('/search/', { params: params });
   },
   login(credentials) {
     return apiClient.post('/auth/login/', credentials);

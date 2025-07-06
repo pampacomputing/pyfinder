@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.socialaccount',
     'cpf_search',
+    'clear_auth_app',
 ]
 
 MIDDLEWARE = [
@@ -148,6 +149,9 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',
     ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.AllowAny',
+    ]
 }
 
 AUTHENTICATION_BACKENDS = (
@@ -160,8 +164,22 @@ ACCOUNT_AUTHENTICATION_METHOD = 'username_email'
 ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_UNIQUE_EMAIL = True
 ACCOUNT_USERNAME_REQUIRED = False
-ACCOUNT_EMAIL_VERIFICATION = 'optional'
+ACCOUNT_EMAIL_VERIFICATION = 'none'
 LOGIN_REDIRECT_URL = '/'
 
 # Email backend for development
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+REST_AUTH_REGISTER_PERMISSION_CLASSES = (
+    'rest_framework.permissions.AllowAny',
+)
+
+REST_USE_JWT = False
+
+REST_AUTH_SERIALIZERS = {
+    'LOGIN_SERIALIZER': 'rest_framework.authtoken.serializers.AuthTokenSerializer',
+}
+
+REST_AUTH_REGISTER_SERIALIZERS = {
+    'REGISTER_SERIALIZER': 'cpf_search.serializers.CustomRegisterSerializer',
+}
