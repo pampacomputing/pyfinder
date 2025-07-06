@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework import status
 import re
 from django.conf import settings
+import threading
 
 class CNPJSearchView(APIView):
     def post(self, request, *args, **kwargs):
@@ -26,52 +27,74 @@ class CNPJSearchView(APIView):
         cnpj_ordem = cnpj_digits[8:12]
         cnpj_dv = cnpj_digits[12:14]
 
-        # Connect to cnpj.db
         cnpj_db_path = settings.DATABASES['cnpj_db']['NAME']
-        cnpj_conn = sqlite3.connect(cnpj_db_path)
-        cnpj_cursor = cnpj_conn.cursor()
-
-        # Connect to basecpf.db
         basecpf_db_path = settings.DATABASES['default']['NAME']
-        basecpf_conn = sqlite3.connect(basecpf_db_path)
-        basecpf_cursor = basecpf_conn.cursor()
+
+        # Data containers for threads
+        empresa_data = [None]
+        estabelecimento_data = [None]
+        simples_data = [None]
+        socios_data = [None]
+
+        def fetch_cnpj_data():
+            cnpj_conn = sqlite3.connect(cnpj_db_path)
+            cnpj_cursor = cnpj_conn.cursor()
+            try:
+                empresa_data[0] = self._query_empresa(cnpj_cursor, cnpj_basico)
+                estabelecimento_data[0] = self._query_estabelecimento(cnpj_cursor, cnpj_basico, cnpj_ordem, cnpj_dv)
+                simples_data[0] = self._query_simples(cnpj_cursor, cnpj_basico)
+                socios_data[0] = self._query_socios(cnpj_cursor, cnpj_basico)
+            finally:
+                cnpj_conn.close()
+
+        def fetch_cpf_data_for_socios():
+            # This function will be called after socios_data is available from fetch_cnpj_data
+            # It's not truly parallel with the initial CNPJ queries, but it's separated
+            pass # Actual logic will be in _enrich_socios_data
+
+        # Run CNPJ data fetching in a separate thread
+        cnpj_thread = threading.Thread(target=fetch_cnpj_data)
+        cnpj_thread.start()
+        cnpj_thread.join() # Wait for CNPJ data to be fetched
+
+        if not empresa_data[0]:
+            return Response({"error": "CNPJ not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Now enrich data and fetch CPF details for socios
+        cnpj_conn_for_enrichment = sqlite3.connect(cnpj_db_path) # New connection for enrichment
+        cnpj_cursor_for_enrichment = cnpj_conn_for_enrichment.cursor()
 
         try:
-            # 3. Querying cnpj.db
-            # 3.1. Company core data (empresas)
-            empresa_data = self._query_empresa(cnpj_cursor, cnpj_basico)
-            if not empresa_data:
-                return Response({"error": "CNPJ not found."}, status=status.HTTP_404_NOT_FOUND)
+            enriched_empresa = self._enrich_empresa_data(cnpj_cursor_for_enrichment, empresa_data[0])
+            enriched_estabelecimento = self._enrich_estabelecimento_data(cnpj_cursor_for_enrichment, estabelecimento_data[0])
+            enriched_simples = self._enrich_simples_data(simples_data[0])
 
-            # 3.2. Establishment details (estabelecimento)
-            estabelecimento_data = self._query_estabelecimento(cnpj_cursor, cnpj_basico, cnpj_ordem, cnpj_dv)
+            # Fetch CPF data for socios in a separate thread
+            enriched_socios_result = [None]
+            def enrich_socios_thread_target():
+                basecpf_conn = sqlite3.connect(basecpf_db_path)
+                basecpf_cursor = basecpf_conn.cursor()
+                try:
+                    enriched_socios_result[0] = self._enrich_socios_data(cnpj_cursor_for_enrichment, basecpf_cursor, socios_data[0])
+                finally:
+                    basecpf_conn.close()
 
-            # 3.3. SIMPLES regime (simples)
-            simples_data = self._query_simples(cnpj_cursor, cnpj_basico)
+            socios_thread = threading.Thread(target=enrich_socios_thread_target)
+            socios_thread.start()
+            socios_thread.join()
 
-            # 4. Enriching codes -> descriptions
-            enriched_empresa = self._enrich_empresa_data(cnpj_cursor, empresa_data)
-            enriched_estabelecimento = self._enrich_estabelecimento_data(cnpj_cursor, estabelecimento_data)
-            enriched_simples = self._enrich_simples_data(simples_data)
-
-            # 5. Fetching partners (socios)
-            socios_data = self._query_socios(cnpj_cursor, cnpj_basico)
-            enriched_socios = self._enrich_socios_data(cnpj_cursor, basecpf_cursor, socios_data)
-
-            # 6. Assemble and return JSON
             response_data = self._assemble_json(
                 cnpj_digits,
                 enriched_empresa,
                 enriched_estabelecimento,
                 enriched_simples,
-                enriched_socios
+                enriched_socios_result[0]
             )
 
             return Response(response_data, status=status.HTTP_200_OK)
 
         finally:
-            cnpj_conn.close()
-            basecpf_conn.close()
+            cnpj_conn_for_enrichment.close()
 
     def _validate_cnpj_check_digits(self, cnpj):
         def calculate_dv(cnpj_part, weights):
@@ -84,7 +107,7 @@ class CNPJSearchView(APIView):
         # Calculate first check digit
         cnpj_12_digits = cnpj[0:12]
         weights1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
-        dv1_calculated = calculate_dv(cnpj_12_digits, weights1)
+        dv1_calculated = calculate_dv(cnpj_12_digits, weights1);
 
         # Validate first check digit
         if int(cnpj[12]) != dv1_calculated:
@@ -93,7 +116,7 @@ class CNPJSearchView(APIView):
         # Calculate second check digit
         cnpj_13_digits = cnpj[0:13] # Includes the first calculated DV
         weights2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
-        dv2_calculated = calculate_dv(cnpj_13_digits, weights2)
+        dv2_calculated = calculate_dv(cnpj_13_digits, weights2);
 
         # Validate second check digit
         if int(cnpj[13]) != dv2_calculated:
