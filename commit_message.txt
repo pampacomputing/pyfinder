@@ -1,0 +1,1 @@
+feat: Allow incomplete name searches in CPF search

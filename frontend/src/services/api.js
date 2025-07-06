@@ -98,4 +98,7 @@ export default {
   register(userData) {
     return apiClient.post('/auth/registration/', userData);
   },
+  cnpjSearch(data) {
+    return apiClient.post('/cnpj/search/', data);
+  },
 };

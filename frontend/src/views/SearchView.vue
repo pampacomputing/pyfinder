@@ -129,33 +129,37 @@
             </div>
 
             <!-- CNPJ Company Data -->
-            <div v-else-if="results.company_data && Object.keys(results.company_data).length > 0" class="mt-4">
+            <div v-else-if="results.empresa && Object.keys(results.empresa).length > 0" class="mt-4">
               <h5 class="card-title p-3">Company Data (CNPJ)</h5>
               <div class="table-container table-responsive">
                 <table class="table table-dark table-striped table-hover m-0">
                   <thead>
                     <tr>
-                      <th>CNPJ Básico</th>
+                      <th>CNPJ</th>
                       <th>Razão Social</th>
+                      <th>Nome Fantasia</th>
                       <th>Natureza Jurídica</th>
-                      <th>Qualificação Responsável</th>
-                      <th>Porte Empresa</th>
-                      <th>Ente Federativo Responsável</th>
+                      <th>Porte</th>
                       <th>Capital Social</th>
+                      <th>Situação Cadastral</th>
+                      <th>Data Situação Cadastral</th>
+                      <th>Motivo Situação Cadastral</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr
-                      @click="selectCompany(results.company_data)"
-                      :class="{ 'table-active': selectedCompanyData === results.company_data }"
+                      @click="selectCompany(results.empresa)"
+                      :class="{ 'table-active': selectedCompanyData === results.empresa }"
                     >
-                      <td>{{ results.company_data.cnpj_basico }}</td>
-                      <td>{{ results.company_data.razao_social }}</td>
-                      <td>{{ results.company_data.natureza_juridica }}</td>
-                      <td>{{ results.company_data.qualificacao_responsavel }}</td>
-                      <td>{{ results.company_data.porte_empresa }}</td>
-                      <td>{{ results.company_data.ente_federativo_responsavel }}</td>
-                      <td>{{ results.company_data.capital_social }}</td>
+                      <td>{{ results.cnpj }}</td>
+                      <td>{{ results.empresa.razao_social }}</td>
+                      <td>{{ results.empresa.nome_fantasia }}</td>
+                      <td>{{ results.empresa.natureza_juridica.descricao }}</td>
+                      <td>{{ results.empresa.porte }}</td>
+                      <td>{{ results.empresa.capital_social }}</td>
+                      <td>{{ results.empresa.situacao_cadastral.descricao }}</td>
+                      <td>{{ results.empresa.situacao_cadastral.data }}</td>
+                      <td>{{ results.empresa.situacao_cadastral.motivo.descricao }}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -163,16 +167,16 @@
             </div>
 
             <!-- CNPJ Partner Data (Subtable) -->
-            <div v-if="selectedCompanyData && selectedCompanyData.partners_data && selectedCompanyData.partners_data.length > 0" class="mt-4">
-              <h5 class="card-title p-3">Partner Data for {{ selectedCompanyData.razao_social }}</h5>
+            <div v-if="results.socios && results.socios.length > 0" class="mt-4">
+              <h5 class="card-title p-3">Partner Data for {{ results.empresa.razao_social }}</h5>
               <div class="table-container table-responsive">
                 <table class="table table-dark table-striped table-hover m-0">
                   <thead>
                     <tr>
-                      <th>CPF/CNPJ Sócio</th>
-                      <th>Nome Sócio</th>
+                      <th>CPF</th>
+                      <th>Nome</th>
+                      <th>Sexo</th>
                       <th>Data de Nascimento</th>
-                      <th>Gênero</th>
                       <th>Qualificação Sócio</th>
                       <th>Data Entrada Sociedade</th>
                       <th>País</th>
@@ -183,17 +187,17 @@
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="(partner, partnerIdx) in selectedCompanyData.partners_data" :key="partnerIdx">
+                    <tr v-for="(partner, partnerIdx) in results.socios" :key="partnerIdx">
                       <td>{{ partner.cpf }}</td>
                       <td>{{ partner.nome }}</td>
+                      <td>{{ partner.sexo }}</td>
                       <td>{{ partner.data_nascimento }}</td>
-                      <td>{{ partner.genero }}</td>
-                      <td>{{ partner.qualificacao_socio }}</td>
+                      <td>{{ partner.qualificacao_socio.descricao }}</td>
                       <td>{{ partner.data_entrada_sociedade }}</td>
-                      <td>{{ partner.pais }}</td>
+                      <td>{{ partner.pais.descricao }}</td>
                       <td>{{ partner.representante_legal }}</td>
                       <td>{{ partner.nome_representante }}</td>
-                      <td>{{ partner.qualificacao_representante_legal }}</td>
+                      <td>{{ partner.qualificacao_representante_legal.descricao }}</td>
                       <td>{{ partner.faixa_etaria }}</td>
                     </tr>
                   </tbody>
@@ -224,7 +228,7 @@
                         <td>{{ companyData.company_details.cnpj_basico }}</td>
                         <td>{{ companyData.company_details.razao_social }}</td>
                         <td>{{ companyData.company_details.natureza_juridica }}</td>
-                        <td>{{ companyData.company_details.qualificacao_responsavel }}</td>
+                        <td>{{ companyData.company_details.company_details.qualificacao_responsavel }}</td>
                         <td>{{ companyData.company_details.porte_empresa }}</td>
                         <td>{{ companyData.company_details.ente_federativo_responsavel }}</td>
                         <td>{{ companyData.company_details.capital_social }}</td>
@@ -279,7 +283,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, inject } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import api from '@/services/api'
 import {useRouter} from "vue-router";
 
@@ -315,18 +319,16 @@ const goToCpfPage = n => { // Renamed from 'goToPage'
 let debounceTimer = null
 
 const performSearch = async (searchType = 'cpf') => {
-  const showErrorModal = inject('showErrorModal');
+  
   // Basic validation for CPF and CNPJ
   const cleanCpf = searchCriteria.value.cpf.replace(/[^0-9]/g, '');
   const cleanCnpj = searchCriteria.value.cnpj.replace(/[^0-9]/g, '');
 
   if (searchType === 'cpf' && cleanCpf && cleanCpf.length !== 11) {
-    showErrorModal(['CPF must have 11 digits.']);
     results.value = null;
     return;
   }
   if (searchType === 'cnpj' && cleanCnpj && !/^\d{14}$/.test(cleanCnpj)) {
-    showErrorModal(['CNPJ must have 14 digits and contain only numbers.']);
     results.value = null;
     return;
   }
@@ -336,7 +338,6 @@ const performSearch = async (searchType = 'cpf') => {
 
   if (!hasSearchCriteria) {
     results.value = null; // Clear previous results
-    showErrorModal(['Please enter at least one search criterion (CPF, CNPJ, or Name).']);
     return;
   }
 
@@ -357,7 +358,6 @@ const performSearch = async (searchType = 'cpf') => {
     results.value = responseData // Store the entire data object
     cpfPage.value = 1 // reset on new search
   } catch (err) {
-    showErrorModal(err);
     results.value = null
   } finally {
     loading.value = false
@@ -369,18 +369,66 @@ const performSearchNow = () => {
   performSearch('cpf') // Default to CPF search
 }
 
-const performCnpjSearch = () => {
+const performCnpjSearch = async () => {
   clearTimeout(debounceTimer)
-  performSearch('cnpj')
-}
+  const cleanCnpj = searchCriteria.value.cnpj.replace(/[^0-9]/g, '');
 
-const selectCpfResult = (result) => {
-  selectedCpfResult.value = result;
-}
+  if (!cleanCnpj || cleanCnpj.length !== 14) {
+    alert("CNPJ must have 14 digits.");
+    results.value = null;
+    return;
+  }
 
-const selectCompany = (company) => {
-  selectedCompanyData.value = company;
-}
+  if (!validateCnpjCheckDigits(cleanCnpj)) {
+    alert("Invalid CNPJ check digits.");
+    results.value = null;
+    return;
+  }
+
+  loading.value = true;
+  selectedCpfResult.value = null;
+  selectedCompanyData.value = null;
+
+  try {
+    const { data } = await api.cnpjSearch({ cnpj: cleanCnpj });
+    results.value = data;
+  } catch (err) {
+    console.error("CNPJ search error:", err);
+    results.value = null;
+    alert("Error searching CNPJ. Please try again.");
+  } finally {
+    loading.value = false;
+  }
+};
+
+const validateCnpjCheckDigits = (cnpj) => {
+  function calculateDv(cnpjPart, weights) {
+    let total = 0;
+    for (let i = 0; i < cnpjPart.length; i++) {
+      total += parseInt(cnpjPart[i]) * weights[i];
+    }
+    let remainder = total % 11;
+    return remainder < 2 ? 0 : 11 - remainder;
+  }
+
+  const cnpj12Digits = cnpj.substring(0, 12);
+  const weights1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  const dv1Calculated = calculateDv(cnpj12Digits, weights1);
+
+  if (parseInt(cnpj[12]) !== dv1Calculated) {
+    return false;
+  }
+
+  const cnpj13Digits = cnpj.substring(0, 13);
+  const weights2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  const dv2Calculated = calculateDv(cnpj13Digits, weights2);
+
+  if (parseInt(cnpj[13]) !== dv2Calculated) {
+    return false;
+  }
+
+  return true;
+};
 
 watch(
   searchCriteria,

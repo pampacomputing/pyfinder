@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'allauth.socialaccount',
     'cpf_search',
     'clear_auth_app',
+    'cnpj_search',
 ]
 
 MIDDLEWARE = [
@@ -91,11 +92,11 @@ import os
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': 'C:/Users/danie/Documents/Projects/db/basecpf.db',
+        'NAME': BASE_DIR / '..' / 'db' / 'basecpf.db',
     },
     'cnpj_db': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': 'C:/Users/danie/Documents/Projects/db/CNPJ.db',
+        'NAME': BASE_DIR / '..' / 'db' / 'cnpj.db',
     }
 }
 
