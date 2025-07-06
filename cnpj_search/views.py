@@ -262,22 +262,29 @@ class CNPJSearchView(APIView):
     def _enrich_socios_data(self, cnpj_cursor, basecpf_cursor, socios_data):
         enriched_socios = []
         for socio in socios_data:
-            cpf_value = socio[1]
+            nome_socio = socio[0]
+            cpf_value = None
             sexo = None
             data_nascimento = None
-            if cpf_value:
-                basecpf_cursor.execute("""
-                    SELECT sexo, nasc
-                    FROM cpf
-                    WHERE cpf = ?;
-                """, (cpf_value,))
-                cpf_details = basecpf_cursor.fetchone()
-                if cpf_details:
-                    sexo = cpf_details[0]
-                    data_nascimento = cpf_details[1]
+
+            # Attempt to find CPF details by name in basecpf.db
+            # WARNING: Searching by name is not a reliable method for unique identification
+            # and may lead to incorrect associations if multiple individuals share the same name.
+            basecpf_cursor.execute("""
+                SELECT cpf, sexo, nasc
+                FROM cpf
+                WHERE nome = ?
+                LIMIT 1;
+            """, (nome_socio,))
+            cpf_details = basecpf_cursor.fetchone()
+            print(f"DEBUG: Searching CPF by name '{nome_socio}', Details: {cpf_details}") # Debug print
+            if cpf_details:
+                cpf_value = cpf_details[0]
+                sexo = cpf_details[1]
+                data_nascimento = cpf_details[2]
 
             enriched_socios.append({
-                "cpf": socio[1],
+                "cpf": cpf_value, # Use the unmasked CPF found by name
                 "nome": socio[0],
                 "sexo": sexo,
                 "data_nascimento": data_nascimento,
