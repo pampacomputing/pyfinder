@@ -97,9 +97,9 @@
                       :class="{ 'table-active': selectedCpfResult === result }"
                     >
                       <td>{{ (cpfPage - 1) * perPage + idx + 1 }}</td>
-                      <td>{{ result.cpf }}</td>
+                      <td>{{ formatCpf(result.cpf) }}</td>
                       <td>{{ result.name }}</td>
-                      <td>{{ result.date }}</td>
+                      <td>{{ formatDate(result.date) }}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -136,14 +136,14 @@
                   <thead>
                     <tr>
                       <th>CNPJ</th>
-                      <th>Razão Social</th>
-                      <th>Nome Fantasia</th>
-                      <th>Natureza Jurídica</th>
-                      <th>Porte</th>
-                      <th>Capital Social</th>
-                      <th>Situação Cadastral</th>
-                      <th>Data Situação Cadastral</th>
-                      <th>Motivo Situação Cadastral</th>
+                      <th>Company Name</th>
+                      <th>Trade Name</th>
+                      <th>Legal Nature</th>
+                      <th>Size</th>
+                      <th>Capital Stock</th>
+                      <th>Registration Status</th>
+                      <th>Registration Date</th>
+                      <th>Registration Status Reason</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -151,14 +151,14 @@
                       @click="selectCompany(results.empresa)"
                       :class="{ 'table-active': selectedCompanyData === results.empresa }"
                     >
-                      <td>{{ results.cnpj }}</td>
+                      <td>{{ formatCnpj(results.cnpj) }}</td>
                       <td>{{ results.empresa.razao_social }}</td>
                       <td>{{ results.empresa.nome_fantasia }}</td>
                       <td>{{ results.empresa.natureza_juridica.descricao }}</td>
                       <td>{{ results.empresa.porte }}</td>
                       <td>{{ results.empresa.capital_social }}</td>
                       <td>{{ results.empresa.situacao_cadastral.descricao }}</td>
-                      <td>{{ results.empresa.situacao_cadastral.data }}</td>
+                      <td>{{ formatDate(results.empresa.situacao_cadastral.data) }}</td>
                       <td>{{ results.empresa.situacao_cadastral.motivo.descricao }}</td>
                     </tr>
                   </tbody>
@@ -174,26 +174,26 @@
                   <thead>
                     <tr>
                       <th>CPF</th>
-                      <th>Nome</th>
-                      <th>Sexo</th>
-                      <th>Data de Nascimento</th>
-                      <th>Qualificação Sócio</th>
-                      <th>Data Entrada Sociedade</th>
-                      <th>País</th>
-                      <th>Representante Legal</th>
-                      <th>Nome Representante</th>
-                      <th>Qualificação Representante Legal</th>
-                      <th>Faixa Etária</th>
+                      <th>Name</th>
+                      <th>Gender</th>
+                      <th>Birthdate</th>
+                      <th>Partner Qualification</th>
+                      <th>Entry Date</th>
+                      <th>Country</th>
+                      <th>Legal Representative</th>
+                      <th>Representative Name</th>
+                      <th>Legal Representative Qualification</th>
+                      <th>Age Range</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr v-for="(partner, partnerIdx) in results.socios" :key="partnerIdx">
-                      <td>{{ partner.cpf }}</td>
+                      <td>{{ formatCpf(partner.cpf) }}</td>
                       <td>{{ partner.nome }}</td>
-                      <td>{{ partner.sexo }}</td>
-                      <td>{{ partner.data_nascimento }}</td>
+                      <td>{{ formatGender(partner.sexo) }}</td>
+                      <td>{{ formatDate(partner.data_nascimento) }}</td>
                       <td>{{ partner.qualificacao_socio.descricao }}</td>
-                      <td>{{ partner.data_entrada_sociedade }}</td>
+                      <td>{{ formatDate(partner.data_entrada_sociedade) }}</td>
                       <td>{{ partner.pais.descricao }}</td>
                       <td>{{ partner.representante_legal }}</td>
                       <td>{{ partner.nome_representante }}</td>
@@ -214,18 +214,18 @@
                   <table class="table table-dark table-striped table-hover m-0">
                     <thead>
                       <tr>
-                        <th>CNPJ Básico</th>
-                        <th>Razão Social</th>
-                        <th>Natureza Jurídica</th>
-                        <th>Qualificação Responsável</th>
-                        <th>Porte Empresa</th>
-                        <th>Ente Federativo Responsável</th>
-                        <th>Capital Social</th>
+                        <th>CNPJ Basic</th>
+                        <th>Company Name</th>
+                        <th>Legal Nature</th>
+                        <th>Responsible Qualification</th>
+                        <th>Company Size</th>
+                        <th>Responsible Federal Entity</th>
+                        <th>Capital Stock</th>
                       </tr>
                     </thead>
                     <tbody>
                       <tr>
-                        <td>{{ companyData.company_details.cnpj_basico }}</td>
+                        <td>{{ formatCnpj(companyData.company_details.cnpj_basico) }}</td>
                         <td>{{ companyData.company_details.razao_social }}</td>
                         <td>{{ companyData.company_details.natureza_juridica }}</td>
                         <td>{{ companyData.company_details.company_details.qualificacao_responsavel }}</td>
@@ -242,32 +242,32 @@
                   <table class="table table-dark table-striped table-hover m-0">
                     <thead>
                       <tr>
-                        <th>CPF/CNPJ Sócio</th>
-                        <th>Nome Sócio</th>
-                        <th>Data de Nascimento</th>
-                        <th>Gênero</th>
-                        <th>Qualificação Sócio</th>
-                        <th>Data Entrada Sociedade</th>
-                        <th>País</th>
-                        <th>Representante Legal</th>
-                        <th>Nome Representante</th>
-                        <th>Qualificação Representante Legal</th>
-                        <th>Faixa Etária</th>
+                        <th>CPF/CNPJ Partner</th>
+                        <th>Partner Name</th>
+                        <th>Birthdate</th>
+                        <th>Gender</th>
+                        <th>Partner Qualification</th>
+                        <th>Entry Date</th>
+                        <th>Country</th>
+                        <th>Legal Representative</th>
+                        <th>Representative Name</th>
+                        <th>Legal Representative Qualification</th>
+                        <th>Age Range</th>
                       </tr>
                     </thead>
                     <tbody>
                       <tr v-for="(partner, partnerIdx) in companyData.partners" :key="partnerIdx">
-                        <td>{{ partner.cpf }}</td>
-                        <td>{{ partner.nome }}</td>
-                        <td>{{ partner.data_nascimento }}</td>
-                        <td>{{ partner.genero }}</td>
-                        <td>{{ partner.qualificacao_socio }}</td>
-                        <td>{{ partner.data_entrada_sociedade }}</td>
-                        <td>{{ partner.pais }}</td>
-                        <td>{{ partner.representante_legal }}</td>
-                        <td>{{ partner.nome_representante }}</td>
-                        <td>{{ partner.qualificacao_representante_legal }}</td>
-                        <td>{{ partner.faixa_etaria }}</td>
+                        <td>{{ formatCpf(partner.cpf) }}</td>
+                      <td>{{ partner.nome }}</td>
+                      <td>{{ partner.data_nascimento }}</td>
+                      <td>{{ partner.genero }}</td>
+                      <td>{{ partner.qualificacao_socio }}</td>
+                      <td>{{ partner.data_entrada_sociedade }}</td>
+                      <td>{{ partner.pais }}</td>
+                      <td>{{ partner.representante_legal }}</td>
+                      <td>{{ partner.nome_representante }}</td>
+                      <td>{{ partner.qualificacao_representante_legal }}</td>
+                      <td>{{ partner.faixa_etaria }}</td>
                       </tr>
                     </tbody>
                   </table>
@@ -428,6 +428,43 @@ const validateCnpjCheckDigits = (cnpj) => {
   }
 
   return true;
+};
+
+const formatCpf = (cpf) => {
+  if (!cpf) return '';
+  const cleanCpf = cpf.replace(/\D/g, '');
+  if (cleanCpf.length !== 11) return cpf; // Return original if not 11 digits
+  return cleanCpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+};
+
+const formatCnpj = (cnpj) => {
+  if (!cnpj) return '';
+  const cleanCnpj = cnpj.replace(/\D/g, '');
+  if (cleanCnpj.length !== 14) return cnpj; // Return original if not 14 digits
+  return cleanCnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+};
+
+const formatDate = (dateString) => {
+  if (!dateString) return '';
+  // Handle YYYYMMDD format
+  if (dateString.length === 8 && /^[0-9]+$/.test(dateString)) {
+    const year = dateString.substring(0, 4);
+    const month = dateString.substring(4, 6);
+    const day = dateString.substring(6, 8);
+    return `${day}/${month}/${year}`;
+  }
+  // Handle YYYY-MM-DD format (if any other dates use this)
+  if (dateString.includes('-')) {
+    const [year, month, day] = dateString.split('-');
+    return `${day}/${month}/${year}`;
+  }
+  return dateString; // Return original if format is unexpected
+};
+
+const formatGender = (genderCode) => {
+  if (genderCode === 'M') return 'Male';
+  if (genderCode === 'F') return 'Female';
+  return genderCode; // Return original if not M or F
 };
 
 watch(
