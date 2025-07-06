@@ -75,7 +75,7 @@ class CNPJSearchView(APIView):
                 basecpf_conn = sqlite3.connect(basecpf_db_path)
                 basecpf_cursor = basecpf_conn.cursor()
                 try:
-                    enriched_socios_result[0] = self._enrich_socios_data(cnpj_cursor_for_enrichment, basecpf_cursor, socios_data[0])
+                    enriched_socios_result[0] = self._enrich_socios_data(basecpf_cursor, socios_data[0])
                 finally:
                     basecpf_conn.close()
 
@@ -282,53 +282,60 @@ class CNPJSearchView(APIView):
             "data_exclusao_mei": data[5]
         }
 
-    def _enrich_socios_data(self, cnpj_cursor, basecpf_cursor, socios_data):
+    def _enrich_socios_data(self, basecpf_cursor, socios_data):
         enriched_socios = []
-        for socio in socios_data:
-            nome_socio = socio[0]
-            cpf_value = None
-            sexo = None
-            data_nascimento = None
+        cnpj_db_path = settings.DATABASES['cnpj_db']['NAME']
+        cnpj_conn_local = sqlite3.connect(cnpj_db_path)
+        cnpj_cursor_local = cnpj_conn_local.cursor()
 
-            # Attempt to find CPF details by name in basecpf.db
-            # WARNING: Searching by name is not a reliable method for unique identification
-            # and may lead to incorrect associations if multiple individuals share the same name.
-            basecpf_cursor.execute("""
-                SELECT cpf, sexo, nasc
-                FROM cpf
-                WHERE nome = ?
-                LIMIT 1;
-            """, (nome_socio,))
-            cpf_details = basecpf_cursor.fetchone()
-            print(f"DEBUG: Searching CPF by name '{nome_socio}', Details: {cpf_details}") # Debug print
-            if cpf_details:
-                cpf_value = cpf_details[0]
-                sexo = cpf_details[1]
-                data_nascimento = cpf_details[2]
+        try:
+            for socio in socios_data:
+                nome_socio = socio[0]
+                cpf_value = None
+                sexo = None
+                data_nascimento = None
 
-            enriched_socios.append({
-                "cpf": cpf_value, # Use the unmasked CPF found by name
-                "nome": socio[0],
-                "sexo": sexo,
-                "data_nascimento": data_nascimento,
-                "qualificacao_socio": {
-                    "codigo": socio[2],
-                    "descricao": self._get_description(cnpj_cursor, "qualificacao_socio", socio[2])
-                },
-                "data_entrada_sociedade": socio[3],
-                "pais": {
-                    "codigo": socio[4],
-                    "descricao": self._get_description(cnpj_cursor, "pais", socio[4])
-                },
-                "representante_legal": socio[5],
-                "nome_representante": socio[6],
-                "qualificacao_representante_legal": {
-                    "codigo": socio[7],
-                    "descricao": self._get_description(cnpj_cursor, "qualificacao_socio", socio[7])
-                },
-                "faixa_etaria": socio[8]
-            })
-        return enriched_socios
+                # Attempt to find CPF details by name in basecpf.db
+                # WARNING: Searching by name is not a reliable method for unique identification
+                # and may lead to incorrect associations if multiple individuals share the same name.
+                basecpf_cursor.execute("""
+                    SELECT cpf, sexo, nasc
+                    FROM cpf
+                    WHERE nome = ?
+                    LIMIT 1;
+                """, (nome_socio,))
+                cpf_details = basecpf_cursor.fetchone()
+                print(f"DEBUG: Searching CPF by name '{nome_socio}', Details: {cpf_details}") # Debug print
+                if cpf_details:
+                    cpf_value = cpf_details[0]
+                    sexo = cpf_details[1]
+                    data_nascimento = cpf_details[2]
+
+                enriched_socios.append({
+                    "cpf": cpf_value, # Use the unmasked CPF found by name
+                    "nome": socio[0],
+                    "sexo": sexo,
+                    "data_nascimento": data_nascimento,
+                    "qualificacao_socio": {
+                        "codigo": socio[2],
+                        "descricao": self._get_description(cnpj_cursor_local, "qualificacao_socio", socio[2])
+                    },
+                    "data_entrada_sociedade": socio[3],
+                    "pais": {
+                        "codigo": socio[4],
+                        "descricao": self._get_description(cnpj_cursor_local, "pais", socio[4])
+                    },
+                    "representante_legal": socio[5],
+                    "nome_representante": socio[6],
+                    "qualificacao_representante_legal": {
+                        "codigo": socio[7],
+                        "descricao": self._get_description(cnpj_cursor_local, "qualificacao_socio", socio[7])
+                    },
+                    "faixa_etaria": socio[8]
+                })
+            return enriched_socios
+        finally:
+            cnpj_conn_local.close()
 
     def _assemble_json(self, cnpj_digits, empresa, estabelecimento, simples, socios):
         # Mapping for porte_empresa is now handled in _enrich_empresa_data
