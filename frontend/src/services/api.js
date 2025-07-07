@@ -52,8 +52,13 @@ apiClient.interceptors.response.use(
   },
   (error) => {
     if (error.response) {
-      // Erro de resposta da API (status code fora do 2xx)
       const { data, status } = error.response;
+
+      if (status === 401) {
+        localStorage.removeItem('token');
+        return Promise.reject(['Session expired. Please log in again.']);
+      }
+
       let errorMessages = [];
       if (data && typeof data === 'object') {
         for (const key in data) {
@@ -66,16 +71,12 @@ apiClient.interceptors.response.use(
       else {
         errorMessages.push(`Error ${status}: ${error.message}`);
       }
-      // Aqui você precisará injetar o showErrorModal do App.vue
-      // Por enquanto, vamos apenas rejeitar a promessa
       return Promise.reject(errorMessages);
     }
     else if (error.request) {
-      // The request was made but no response was received
       return Promise.reject(['No response from server. Check your connection.']);
     }
     else {
-      // Something happened in setting up the request that triggered an Error
       return Promise.reject([`Request error: ${error.message}`]);
     }
   }

@@ -1,6 +1,7 @@
+
 from django.urls import path
-from .views import CNPJSearchView
+from . import views
 
 urlpatterns = [
-    path('search/', CNPJSearchView.as_view(), name='cnpj_search'),
+    path('search/', views.CNPJSearchView.as_view(), name='search'),
 ]

@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-c7=hk$)b_7gx@$g@91v#col!u_00zps+v9h0-5_8(&96)^&!ub
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 
 # Application definition
@@ -49,6 +49,8 @@ INSTALLED_APPS = [
     'cpf_search',
     'clear_auth_app',
     'cnpj_search',
+    'login',
+    'logout_all',
 ]
 
 MIDDLEWARE = [
@@ -184,3 +186,5 @@ REST_AUTH_SERIALIZERS = {
 REST_AUTH_REGISTER_SERIALIZERS = {
     'REGISTER_SERIALIZER': 'cpf_search.serializers.CustomRegisterSerializer',
 }
+
+LOGIN_URL = 'login'

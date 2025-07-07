@@ -65,7 +65,7 @@ provide('showErrorModal', showErrorModal);
   max-width: none !important;
   padding: 0 !important;
   margin: 0 !important;
-  display: block !important;
+  display: block !importan;
 }
 @media (min-width: 1024px) {
   body {

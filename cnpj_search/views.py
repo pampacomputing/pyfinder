@@ -6,6 +6,10 @@ import re
 from django.conf import settings
 import threading
 
+from django.contrib.auth.decorators import login_required
+from django.utils.decorators import method_decorator
+
+@method_decorator(login_required, name='dispatch')
 class CNPJSearchView(APIView):
     def post(self, request, *args, **kwargs):
         cnpj = request.data.get('cnpj')

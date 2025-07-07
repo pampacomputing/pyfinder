@@ -1,1 +1,1 @@
-feat: Allow incomplete name searches in CPF search
+fix: Correct TypeError in _enrich_socios_data call

@@ -333,10 +333,11 @@ const performSearch = async (searchType = 'cpf') => {
     return;
   }
 
-  // Only perform search if at least one criterion is not empty
+  // Always perform search if there's a token, even if criteria are empty
+  // This ensures the 401 interceptor is triggered if the token is invalid
   const hasSearchCriteria = Object.values(searchCriteria.value).some(criteria => criteria.length > 0);
 
-  if (!hasSearchCriteria) {
+  if (!hasSearchCriteria && !localStorage.getItem('token')) {
     results.value = null; // Clear previous results
     return;
   }
@@ -479,7 +480,12 @@ watch(
   { deep: true }
 )
 
-onMounted(() => performSearch('cpf')) // Initial search on mount, default to CPF
+onMounted(() => {
+  // Make an initial API call to a protected endpoint to validate the session
+  // This will trigger the 401 interceptor if the token is invalid
+  api.search({}).catch(() => {}); // Catch the error to prevent console warnings
+  performSearch('cpf'); // Initial search on mount, default to CPF
+})
 
 /* ---------- estado de autenticação ------------------------------------ */
 const isAuth = ref(false)
