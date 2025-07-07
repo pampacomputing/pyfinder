@@ -93,7 +93,6 @@
                     <tr
                       v-for="(result, idx) in pagedCpfResults"
                       :key="result.cpf"
-                      @click="selectCpfResult(result)"
                       :class="{ 'table-active': selectedCpfResult === result }"
                     >
                       <td>{{ (cpfPage - 1) * perPage + idx + 1 }}</td>
@@ -135,7 +134,7 @@
                 <table class="table table-dark table-striped table-hover m-0">
                   <thead>
                     <tr>
-                      <th>CNPJ</th>
+                      
                       <th>Company Name</th>
                       <th>Trade Name</th>
                       <th>Legal Nature</th>
