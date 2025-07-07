@@ -87,18 +87,21 @@
                       <th>CPF</th>
                       <th>Name</th>
                       <th>Birthdate</th>
+                      <th>Gender</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr
                       v-for="(result, idx) in pagedCpfResults"
                       :key="result.cpf"
-                      :class="{ 'table-active': selectedCpfResult === result }"
+                      @click="getAssociatedCompanies(result.name)"
+                      :class="{ 'table-active': selectedCpfResult && selectedCpfResult.name === result.name }"
                     >
                       <td>{{ (cpfPage - 1) * perPage + idx + 1 }}</td>
                       <td>{{ formatCpf(result.cpf) }}</td>
                       <td>{{ result.name }}</td>
                       <td>{{ formatDate(result.date) }}</td>
+                      <td>{{ result.gender }}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -201,73 +204,26 @@
               </div>
             </div>
 
-            <!-- Associated Companies and Partners for Selected CPF -->
+            <!-- Associated Companies for Selected CPF -->
             <div v-if="selectedCpfResult && selectedCpfResult.associated_companies && selectedCpfResult.associated_companies.length > 0" class="mt-4">
               <h5 class="card-title p-3">Associated Companies for {{ selectedCpfResult.name }}</h5>
-              <div v-for="(companyData, companyIdx) in selectedCpfResult.associated_companies" :key="companyIdx" class="mb-4">
-                <h6>Company {{ companyIdx + 1 }}:</h6>
-                <div class="table-container table-responsive mb-3">
-                  <table class="table table-dark table-striped table-hover m-0">
-                    <thead>
-                      <tr>
-                        <th>CNPJ Basic</th>
-                        <th>Company Name</th>
-                        <th>Legal Nature</th>
-                        <th>Responsible Qualification</th>
-                        <th>Company Size</th>
-                        <th>Responsible Federal Entity</th>
-                        <th>Capital Stock</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td>{{ formatCnpj(companyData.company_details.cnpj_basico) }}</td>
-                        <td>{{ companyData.company_details.razao_social }}</td>
-                        <td>{{ companyData.company_details.natureza_juridica }}</td>
-                        <td>{{ companyData.company_details.company_details.qualificacao_responsavel }}</td>
-                        <td>{{ companyData.company_details.porte_empresa }}</td>
-                        <td>{{ companyData.company_details.ente_federativo_responsavel }}</td>
-                        <td>{{ companyData.company_details.capital_social }}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-
-                <h6>Partners for this Company:</h6>
-                <div class="table-container table-responsive">
-                  <table class="table table-dark table-striped table-hover m-0">
-                    <thead>
-                      <tr>
-                        <th>CPF/CNPJ Partner</th>
-                        <th>Partner Name</th>
-                        <th>Birthdate</th>
-                        <th>Gender</th>
-                        <th>Partner Qualification</th>
-                        <th>Entry Date</th>
-                        <th>Country</th>
-                        <th>Legal Representative</th>
-                        <th>Representative Name</th>
-                        <th>Legal Representative Qualification</th>
-                        <th>Age Range</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr v-for="(partner, partnerIdx) in companyData.partners" :key="partnerIdx">
-                        <td>{{ formatCpf(partner.cpf) }}</td>
-                      <td>{{ partner.nome }}</td>
-                      <td>{{ partner.data_nascimento }}</td>
-                      <td>{{ partner.genero }}</td>
-                      <td>{{ partner.qualificacao_socio }}</td>
-                      <td>{{ partner.data_entrada_sociedade }}</td>
-                      <td>{{ partner.pais }}</td>
-                      <td>{{ partner.representante_legal }}</td>
-                      <td>{{ partner.nome_representante }}</td>
-                      <td>{{ partner.qualificacao_representante_legal }}</td>
-                      <td>{{ partner.faixa_etaria }}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
+              <div class="table-container table-responsive">
+                <table class="table table-dark table-striped table-hover m-0">
+                  <thead>
+                    <tr>
+                      <th>CNPJ</th>
+                      <th>Company Name</th>
+                      <th>Capital Stock</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(company, companyIdx) in selectedCpfResult.associated_companies" :key="companyIdx">
+                      <td>{{ formatCnpj(company.cnpj) }}</td>
+                      <td>{{ company.razao_social }}</td>
+                      <td>{{ company.capital_social }}</td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
@@ -341,7 +297,6 @@ const performSearch = async (searchType = 'cpf') => {
   loading.value = true
   selectedCpfResult.value = null // Clear selected CPF result on new search
   selectedCompanyData.value = null // Clear selected company data on new search
-  selectedCompanyData.value = null // Clear selected company data on new search
   try {
     let responseData;
     if (searchType === 'cpf') {
@@ -360,6 +315,23 @@ const performSearch = async (searchType = 'cpf') => {
     loading.value = false
   }
 }
+
+const getAssociatedCompanies = async (personName) => {
+  if (!personName) return;
+  loading.value = true;
+  try {
+    const { data } = await api.getCompaniesByName(personName);
+    const resultToUpdate = results.value.user_data.find(user => user.name === personName);
+    if (resultToUpdate) {
+      resultToUpdate.associated_companies = data.associated_companies;
+      selectedCpfResult.value = resultToUpdate;
+    }
+  } catch (err) {
+    console.error("Error fetching associated companies:", err);
+  } finally {
+    loading.value = false;
+  }
+};
 
 const performSearchNow = () => {
   clearTimeout(debounceTimer)

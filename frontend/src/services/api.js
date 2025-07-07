@@ -102,4 +102,7 @@ export default {
   cnpjSearch(data) {
     return apiClient.post('/cnpj/search/', data);
   },
+  getCompaniesByName(name) {
+    return apiClient.get(`/get_companies_by_name/?name=${name}`);
+  },
 };

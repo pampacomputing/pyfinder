@@ -7,7 +7,7 @@ from django.core.exceptions import ValidationError
 class CpfSerializer(serializers.ModelSerializer):
     class Meta:
         model = Cpf
-        fields = ['cpf', 'nome', 'nasc']
+        fields = ['cpf', 'nome', 'nasc', 'sexo']
 
 class CustomRegisterSerializer(RegisterSerializer):
     def validate_password(self, password):

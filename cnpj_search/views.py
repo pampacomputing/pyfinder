@@ -233,7 +233,7 @@ class CNPJSearchView(APIView):
             "nome_fantasia": data[3],
             "situacao_cadastral": {
                 "codigo": data[4],
-                "descricao": self._get_description(cursor, "motivo", data[4])
+                "descricao": self._get_description(cursor, "motivo", data[6])
             },
             "data_situacao_cadastral": data[5],
             "motivo_situacao_cadastral": {
