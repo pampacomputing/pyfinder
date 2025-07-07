@@ -147,10 +147,7 @@
                     </tr>
                   </thead>
                   <tbody>
-                    <tr
-                      @click="selectCompany(results.empresa)"
-                      :class="{ 'table-active': selectedCompanyData === results.empresa }"
-                    >
+                    <tr>
                       <td>{{ formatCnpj(results.cnpj) }}</td>
                       <td>{{ results.empresa.razao_social }}</td>
                       <td>{{ results.empresa.nome_fantasia }}</td>
