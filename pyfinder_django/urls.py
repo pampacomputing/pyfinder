@@ -9,7 +9,5 @@ urlpatterns = [
     path('api/auth/registration/', include('dj_rest_auth.registration.urls')),
     path('accounts/', include('allauth.urls')),
     path('api/cnpj/', include('cnpj_search.urls')),
-    path('search/', include('cnpj_search.urls')),
-    path('', include('login.urls')),
     path('', TemplateView.as_view(template_name='index.html')),
 ]
