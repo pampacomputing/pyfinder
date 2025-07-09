@@ -26,7 +26,7 @@
                   <tr
                     v-for="(result, idx) in pagedCpfResults"
                     :key="result.cpf"
-                    @click="emit('getAssociatedCompanies', result.name)"
+                    @click="emit('getAssociatedCompanies', result.name, result.cpf)"
                     :class="{ 'table-active': selectedCpfResult && selectedCpfResult.name === result.name }"
                   >
                     <td>{{ (cpfPage - 1) * perPage + idx + 1 }}</td>

@@ -91,6 +91,8 @@ const goToCpfPage = n => { // Renamed from 'goToPage'
   if (n >= 1 && n <= totalCpfPages.value) cpfPage.value = n
 }
 
+import unidecode from 'unidecode';
+
 /* --- API ----------------------------------------------------------------- */
 let debounceTimer = null
 
@@ -99,6 +101,7 @@ const performSearch = async (searchType = 'cpf') => {
   // Basic validation for CPF and CNPJ
   const cleanCpf = searchCriteria.value.cpf.replace(/[^0-9]/g, '');
   const cleanCnpj = searchCriteria.value.cnpj.replace(/[^0-9]/g, '');
+  const normalizedName = unidecode(searchCriteria.value.name.toUpperCase());
 
   if (searchType === 'cpf' && cleanCpf && cleanCpf.length !== 11) {
     results.value = null;
@@ -124,7 +127,7 @@ const performSearch = async (searchType = 'cpf') => {
   try {
     let responseData;
     if (searchType === 'cpf') {
-      const { data } = await api.search({ cpf: cleanCpf, name: searchCriteria.value.name.toUpperCase() });
+      const { data } = await api.search({ cpf: cleanCpf, name: normalizedName });
       responseData = data;
     } else if (searchType === 'cnpj') {
       const { data } = await api.search({ cnpj: cleanCnpj });
@@ -140,7 +143,7 @@ const performSearch = async (searchType = 'cpf') => {
   }
 }
 
-const getAssociatedCompanies = async (personName) => {
+const getAssociatedCompanies = async (personName, personCpf) => {
   if (selectedCpfResult.value && selectedCpfResult.value.name === personName) {
     selectedCpfResult.value = null;
     return;
@@ -149,7 +152,7 @@ const getAssociatedCompanies = async (personName) => {
   if (!personName) return;
   loading.value = true;
   try {
-    const { data } = await api.getCompaniesByName(personName);
+    const { data } = await api.getCompaniesByName(personName, personCpf);
     const resultToUpdate = results.value.user_data.find(user => user.name === personName);
     if (resultToUpdate) {
       if (data.associated_companies && data.associated_companies.length > 0) {

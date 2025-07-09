@@ -21,6 +21,8 @@ def index(request):
 def server_control(request):
     return render(request, 'cpf_search/server_control.html')
 
+from unidecode import unidecode
+
 @api_view(['GET', 'POST'])
 def search_cpf(request):
     try:
@@ -41,7 +43,9 @@ def search_cpf(request):
                 clean_cpf = cpf.replace('.', '').replace('-', '')
                 cpf_conditions &= Q(cpf__exact=clean_cpf)
             if name:
-                for word in name.upper().split():
+                # Normalize name using unidecode
+                normalized_name = unidecode(name.upper())
+                for word in normalized_name.split():
                     cpf_conditions &= Q(nome__icontains=word)
 
             def execute_cpf_query():
@@ -80,11 +84,21 @@ def search_cpf(request):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
+import re
+
 @api_view(['GET'])
 def get_companies_by_name(request):
     person_name = request.GET.get('name', '').strip()
-    if not person_name:
-        return Response({'error': 'Name is required.'}, status=status.HTTP_400_BAD_REQUEST)
+    person_cpf = request.GET.get('cpf', '').strip()
+
+    if not person_name or not person_cpf:
+        return Response({'error': 'Name and CPF are required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Mask the CPF
+    clean_cpf = re.sub(r'\D', '', person_cpf)
+    if len(clean_cpf) != 11:
+        return Response({'error': 'Invalid CPF format.'}, status=status.HTTP_400_BAD_REQUEST)
+    masked_cpf = f"***{clean_cpf[3:9]}**"
 
     cnpj_db_path = settings.DATABASES['cnpj_db']['NAME']
     associated_companies = []
@@ -94,7 +108,6 @@ def get_companies_by_name(request):
         conn.row_factory = sqlite3.Row  # Return rows as dictionaries
         cursor = conn.cursor()
         
-        # The socio's CNPJ is the full CNPJ, so we extract the basic part for joining.
         cursor.execute("""
             SELECT
                 s.cnpj,
@@ -109,8 +122,8 @@ def get_companies_by_name(request):
             FROM socios s
             JOIN empresas e ON SUBSTR(s.cnpj, 1, 8) = e.cnpj_basico
             JOIN estabelecimento est ON SUBSTR(s.cnpj, 1, 8) = est.cnpj_basico
-            WHERE s.nome_socio = ? AND est.matriz_filial = '1'
-        """, (person_name,))
+            WHERE s.nome_socio = ? AND s.cnpj_cpf_socio = ? AND est.matriz_filial = '1'
+        """, (person_name, masked_cpf))
         
         company_details = cursor.fetchall()
 
@@ -118,7 +131,6 @@ def get_companies_by_name(request):
         def get_description(table_name, code):
             if code is None or not code.strip():
                 return None
-            # Use a new cursor for lookups to not interfere with the main query
             lookup_cursor = conn.cursor()
             lookup_cursor.execute(f"SELECT descricao FROM {table_name} WHERE codigo = ?", (code,))
             result = lookup_cursor.fetchone()
