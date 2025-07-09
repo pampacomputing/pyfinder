@@ -2,7 +2,7 @@
 <template>
   <div class="card bg-dark text-white border-secondary w-100">
     <div class="card-header">
-      <h4>Search Criteria</h4>
+      <h4>Search</h4>
     </div>
     <div class="card-body">
       <form @submit.prevent="handleCpfSearch">

@@ -23,18 +23,53 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr
-                    v-for="(result, idx) in pagedCpfResults"
-                    :key="result.cpf"
-                    @click="emit('getAssociatedCompanies', result.name, result.cpf)"
-                    :class="{ 'table-active': selectedCpfResult && selectedCpfResult.name === result.name }"
-                  >
-                    <td>{{ (cpfPage - 1) * perPage + idx + 1 }}</td>
-                    <td>{{ formatCpf(result.cpf) }}</td>
-                    <td>{{ result.name }}</td>
-                    <td>{{ formatDate(result.date) }}</td>
-                    <td>{{ result.gender }}</td>
-                  </tr>
+                  <template v-for="(result, idx) in pagedCpfResults" :key="result.cpf">
+                    <tr
+                      @click="emit('getAssociatedCompanies', result.name, result.cpf)"
+                      :class="{ 'table-active': selectedCpfResult && selectedCpfResult.name === result.name }"
+                    >
+                      <td>{{ (cpfPage - 1) * perPage + idx + 1 }}</td>
+                      <td>{{ formatCpf(result.cpf) }}</td>
+                      <td>{{ result.name }}</td>
+                      <td>{{ formatDate(result.date) }}</td>
+                      <td>{{ result.gender }}</td>
+                    </tr>
+                    <tr v-if="selectedCpfResult && selectedCpfResult.name === result.name && selectedCpfResult.associated_companies && selectedCpfResult.associated_companies.length > 0">
+                      <td colspan="5">
+                        <div class="p-3">
+                          <h6 class="text-white">Associated Companies for {{ selectedCpfResult.name }}</h6>
+                          <table class="table table-dark table-sm">
+                            <thead>
+                              <tr>
+                                <th>CNPJ</th>
+                                <th>Company Name</th>
+                                <th>Trade Name</th>
+                                <th>Legal Nature</th>
+                                <th>Size</th>
+                                <th>Capital Stock</th>
+                                <th>Registration Status</th>
+                                <th>Registration Date</th>
+                                <th>Registration Status Reason</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr v-for="(company, companyIdx) in selectedCpfResult.associated_companies" :key="companyIdx">
+                                <td>{{ formatCnpj(company.cnpj) }}</td>
+                                <td>{{ company.razao_social }}</td>
+                                <td>{{ company.nome_fantasia }}</td>
+                                <td>{{ company.natureza_juridica }}</td>
+                                <td>{{ company.porte }}</td>
+                                <td>{{ company.capital_social }}</td>
+                                <td>{{ company.situacao_cadastral }}</td>
+                                <td>{{ formatDate(company.data_situacao_cadastral) }}</td>
+                                <td>{{ company.motivo_situacao_cadastral }}</td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      </td>
+                    </tr>
+                  </template>
                 </tbody>
               </table>
             </div>
@@ -130,41 +165,6 @@
                     <td>{{ partner.nome_representante }}</td>
                     <td>{{ partner.qualificacao_representante_legal.descricao }}</td>
                     <td>{{ partner.faixa_etaria }}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- Associated Companies for Selected CPF -->
-          <div v-if="selectedCpfResult && selectedCpfResult.associated_companies && selectedCpfResult.associated_companies.length > 0" class="mt-4">
-            <h5 class="card-title p-3">Associated Companies for {{ selectedCpfResult.name }}</h5>
-            <div class="table-container table-responsive">
-              <table class="table table-dark table-striped table-hover m-0">
-                <thead>
-                  <tr>
-                    <th>CNPJ</th>
-                    <th>Company Name</th>
-                    <th>Trade Name</th>
-                    <th>Legal Nature</th>
-                    <th>Size</th>
-                    <th>Capital Stock</th>
-                    <th>Registration Status</th>
-                    <th>Registration Date</th>
-                    <th>Registration Status Reason</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="(company, companyIdx) in selectedCpfResult.associated_companies" :key="companyIdx">
-                    <td>{{ formatCnpj(company.cnpj) }}</td>
-                    <td>{{ company.razao_social }}</td>
-                    <td>{{ company.nome_fantasia }}</td>
-                    <td>{{ company.natureza_juridica }}</td>
-                    <td>{{ company.porte }}</td>
-                    <td>{{ company.capital_social }}</td>
-                    <td>{{ company.situacao_cadastral }}</td>
-                    <td>{{ formatDate(company.data_situacao_cadastral) }}</td>
-                    <td>{{ company.motivo_situacao_cadastral }}</td>
                   </tr>
                 </tbody>
               </table>
