@@ -51,7 +51,6 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.socialaccount',
     'cpf_search',
-    'clear_auth_app',
     'cnpj_search',
 ]
 
