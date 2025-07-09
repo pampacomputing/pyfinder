@@ -15,9 +15,9 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-load_dotenv()
+load_dotenv(BASE_DIR / ".env")
 
 
 # Quick-start development settings - unsuitable for production
@@ -49,8 +49,8 @@ INSTALLED_APPS = [
     "allauth",
     "allauth.account",
     "allauth.socialaccount",
-    "cpf_search",
-    "cnpj_search",
+    "apps.cpf_search",
+    "apps.cnpj_search",
 ]
 
 MIDDLEWARE = [
@@ -65,7 +65,7 @@ MIDDLEWARE = [
     "allauth.account.middleware.AccountMiddleware",
 ]
 
-ROOT_URLCONF = "pyfinder_django.urls"
+ROOT_URLCONF = "project.urls"
 
 TEMPLATES = [
     {
@@ -82,7 +82,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = "pyfinder_django.wsgi.application"
+WSGI_APPLICATION = "project.wsgi.application"
 
 
 # ... (keep existing settings) ...
@@ -92,11 +92,11 @@ WSGI_APPLICATION = "pyfinder_django.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / ".." / "db" / "basecpf.db",
+        "NAME": BASE_DIR.parent / "db" / "basecpf.db",
     },
     "cnpj_db": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / ".." / "db" / "cnpj.db",
+        "NAME": BASE_DIR.parent / "db" / "cnpj.db",
     },
 }
 
@@ -180,7 +180,7 @@ REST_AUTH_SERIALIZERS = {
 }
 
 REST_AUTH_REGISTER_SERIALIZERS = {
-    "REGISTER_SERIALIZER": "cpf_search.serializers.CustomRegisterSerializer",
+    "REGISTER_SERIALIZER": "apps.cpf_search.serializers.CustomRegisterSerializer",
 }
 
 LOGIN_URL = "login"

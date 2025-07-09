@@ -1,6 +1,8 @@
 Django
 djangorestframework
 dj-rest-auth[with_social]
+django-allauth
+requests
 django-cors-headers
 python-dotenv
 unidecode

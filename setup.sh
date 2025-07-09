@@ -2,14 +2,14 @@
 set -e
 
 # 1. Create virtual environment
-python -m venv .venv
+python -m venv backend/.venv
 
 # 2. Activate virtual environment
 # shellcheck disable=SC1091
-source .venv/bin/activate
+source backend/.venv/bin/activate
 
 # 3. Install Python dependencies
-pip install -r requirements.txt
+pip install -r backend/requirements.txt
 
 # 4. Copy and configure .env file
 cp .env.example .env

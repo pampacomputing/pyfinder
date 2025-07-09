@@ -1,6 +1,6 @@
 from django.apps import AppConfig
 
 
-class CpfSearchConfig(AppConfig):
+class CnpjSearchConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
-    name = "cpf_search"
+    name = "apps.cnpj_search"
