@@ -76,7 +76,7 @@ import { inject } from 'vue';
            localStorage.setItem('token', loginResponse.data.key); // Assuming the token is in response.data.key
            // Registration successful, but automatic login failed. Please try logging in manually.
            this.$router.push('/search');
-         } catch (loginError) {
+         } catch {
            this.showErrorModal('Registration successful, but automatic login failed. Please try logging in manually.');
            this.$router.push('/login');
          }

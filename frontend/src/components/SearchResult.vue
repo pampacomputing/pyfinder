@@ -177,9 +177,9 @@
 </template>
 
 <script setup>
-import { defineProps, defineEmits, computed } from 'vue';
+import { defineProps, defineEmits } from 'vue';
 
-const props = defineProps({
+defineProps({
   results: {
     type: Object,
     default: () => null,

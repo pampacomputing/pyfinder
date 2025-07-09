@@ -136,7 +136,7 @@ const performSearch = async (searchType = 'cpf') => {
 
     results.value = responseData // Store the entire data object
     cpfPage.value = 1 // reset on new search
-  } catch (err) {
+  } catch {
     results.value = null
   } finally {
     loading.value = false

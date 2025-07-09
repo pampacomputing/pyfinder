@@ -4,22 +4,25 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='Cpf',
+            name="Cpf",
             fields=[
-                ('cpf', models.CharField(db_index=True, max_length=14, primary_key=True, serialize=False)),
-                ('nome', models.CharField(db_index=True, max_length=255)),
-                ('nasc', models.DateField(blank=True, null=True)),
+                (
+                    "cpf",
+                    models.CharField(
+                        db_index=True, max_length=14, primary_key=True, serialize=False
+                    ),
+                ),
+                ("nome", models.CharField(db_index=True, max_length=255)),
+                ("nasc", models.DateField(blank=True, null=True)),
             ],
             options={
-                'db_table': 'cpf',
+                "db_table": "cpf",
             },
         ),
     ]

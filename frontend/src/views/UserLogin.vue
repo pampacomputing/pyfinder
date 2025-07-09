@@ -57,7 +57,7 @@ import { inject } from 'vue';
 
          /* —— Navega para /search — App.vue detectará o token via afterEach —— */
          this.$router.push('/search')
-       } catch (e) {
+       } catch {
          this.showErrorModal(['Invalid credentials.']);
        }
      },
