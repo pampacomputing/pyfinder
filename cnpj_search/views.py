@@ -285,6 +285,15 @@ class CNPJSearchView(APIView):
             "data_exclusao_mei": data[5]
         }
 
+    def _mask_cpf(self, cpf):
+        """Masks a CPF string according to the rule: ***...**"""
+        if not cpf or not isinstance(cpf, str):
+            return ""
+        cpf_digits = re.sub(r'\D', '', cpf)
+        if len(cpf_digits) != 11:
+            return ""
+        return f"***{cpf_digits[3:9]}**"
+
     def _enrich_socios_data(self, basecpf_cursor, socios_data):
         enriched_socios = []
         cnpj_db_path = settings.DATABASES['cnpj_db']['NAME']
@@ -294,28 +303,35 @@ class CNPJSearchView(APIView):
         try:
             for socio in socios_data:
                 nome_socio = socio[0]
+                cnpj_cpf_socio_masked = socio[1]
                 cpf_value = None
                 sexo = None
                 data_nascimento = None
 
-                # Attempt to find CPF details by name in basecpf.db
-                # WARNING: Searching by name is not a reliable method for unique identification
-                # and may lead to incorrect associations if multiple individuals share the same name.
+                # Find potential matches by name in basecpf.db
                 basecpf_cursor.execute("""
                     SELECT cpf, sexo, nasc
                     FROM cpf
-                    WHERE nome = ?
-                    LIMIT 1;
+                    WHERE nome = ?;
                 """, (nome_socio,))
-                cpf_details = basecpf_cursor.fetchone()
-                print(f"DEBUG: Searching CPF by name '{nome_socio}', Details: {cpf_details}") # Debug print
-                if cpf_details:
-                    cpf_value = cpf_details[0]
-                    sexo = cpf_details[1]
-                    data_nascimento = cpf_details[2]
+                
+                potential_matches = basecpf_cursor.fetchall()
+
+                for potential_match in potential_matches:
+                    full_cpf = potential_match[0]
+                    
+                    # Mask the full CPF from basecpf.db to compare
+                    calculated_masked_cpf = self._mask_cpf(full_cpf)
+
+                    if calculated_masked_cpf == cnpj_cpf_socio_masked:
+                        # We found the correct person
+                        cpf_value = full_cpf
+                        sexo = potential_match[1]
+                        data_nascimento = potential_match[2]
+                        break # Stop searching once a match is found
 
                 enriched_socios.append({
-                    "cpf": cpf_value, # Use the unmasked CPF found by name
+                    "cpf": cpf_value,
                     "nome": socio[0],
                     "sexo": sexo,
                     "data_nascimento": data_nascimento,
