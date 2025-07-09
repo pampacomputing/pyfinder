@@ -16,16 +16,13 @@ import concurrent.futures
 from django.db import connections
 
 def index(request):
-    """Main page for CPF search"""
     return render(request, 'cpf_search/index.html')
 
 def server_control(request):
-    """Server control panel (replacement for PyQt GUI)"""
     return render(request, 'cpf_search/server_control.html')
 
 @api_view(['GET', 'POST'])
 def search_cpf(request):
-    """API endpoint to search CPF data (replacement for socket server)"""
     try:
         # Extract search parameters from request
         name = request.data.get('name', '').strip() if request.method == 'POST' else request.GET.get('name', '').strip()
@@ -85,7 +82,6 @@ def search_cpf(request):
 
 @api_view(['GET'])
 def get_companies_by_name(request):
-    """API endpoint to get companies associated with a person's name."""
     person_name = request.GET.get('name', '').strip()
     if not person_name:
         return Response({'error': 'Name is required.'}, status=status.HTTP_400_BAD_REQUEST)
