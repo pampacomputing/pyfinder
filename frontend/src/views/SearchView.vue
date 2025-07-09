@@ -8,7 +8,7 @@
       <div class="col-12 col-lg-10 col-xxl-8 px-0">
         <div class="card bg-dark text-white border-secondary w-100">
           <div class="card-header">
-            <h4>Search Criteria</h4>
+            <h4>Search</h4>
           </div>
           <div class="card-body">
             <form @submit.prevent="performSearchNow">
@@ -24,7 +24,7 @@
                   />
                 </div>
 
-                
+
 
                 <div class="col-sm-6">
                   <label for="cnpj" class="form-label">CNPJ</label>
@@ -48,7 +48,7 @@
                   />
                 </div>
 
-                
+
                 <div class="col-12">
                   <button type="submit" class="btn btn-primary me-2">Search CPF</button>
                   <button type="button" class="btn btn-info" @click="performCnpjSearch">Search CNPJ</button>
@@ -137,7 +137,7 @@
                 <table class="table table-dark table-striped table-hover m-0">
                   <thead>
                     <tr>
-                      
+                      <th>CNPJ</th>
                       <th>Company Name</th>
                       <th>Trade Name</th>
                       <th>Legal Nature</th>
@@ -213,14 +213,26 @@
                     <tr>
                       <th>CNPJ</th>
                       <th>Company Name</th>
+                      <th>Trade Name</th>
+                      <th>Legal Nature</th>
+                      <th>Size</th>
                       <th>Capital Stock</th>
+                      <th>Registration Status</th>
+                      <th>Registration Date</th>
+                      <th>Registration Status Reason</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr v-for="(company, companyIdx) in selectedCpfResult.associated_companies" :key="companyIdx">
                       <td>{{ formatCnpj(company.cnpj) }}</td>
                       <td>{{ company.razao_social }}</td>
+                      <td>{{ company.nome_fantasia }}</td>
+                      <td>{{ company.natureza_juridica }}</td>
+                      <td>{{ company.porte }}</td>
                       <td>{{ company.capital_social }}</td>
+                      <td>{{ company.situacao_cadastral }}</td>
+                      <td>{{ formatDate(company.data_situacao_cadastral) }}</td>
+                      <td>{{ company.motivo_situacao_cadastral }}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -230,7 +242,11 @@
         </div>
       </div>
     </div>
-
+    <InfoModal
+      :is-visible="showInfoModal"
+      :message="modalMessage"
+      @close="showInfoModal = false"
+    />
    </div>
 </template>
 
@@ -238,6 +254,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import api from '@/services/api'
 import {useRouter} from "vue-router";
+import InfoModal from '@/components/InfoModal.vue';
 
 /* --- state --------------------------------------------------------------- */
 const searchCriteria = ref({
@@ -249,6 +266,8 @@ const results = ref(null)
 const loading = ref(false)
 const selectedCpfResult = ref(null) // New state for selected CPF result
 const selectedCompanyData = ref(null) // New state for selected company data
+const showInfoModal = ref(false);
+const modalMessage = ref('');
 
 /* --- pagination for CPF results ------------------------------------------ */
 const cpfPage = ref(1) // Renamed from 'page'
@@ -271,7 +290,7 @@ const goToCpfPage = n => { // Renamed from 'goToPage'
 let debounceTimer = null
 
 const performSearch = async (searchType = 'cpf') => {
-  
+
   // Basic validation for CPF and CNPJ
   const cleanCpf = searchCriteria.value.cpf.replace(/[^0-9]/g, '');
   const cleanCnpj = searchCriteria.value.cnpj.replace(/[^0-9]/g, '');
@@ -306,7 +325,7 @@ const performSearch = async (searchType = 'cpf') => {
       const { data } = await api.search({ cnpj: cleanCnpj });
       responseData = data;
     }
-    
+
     results.value = responseData // Store the entire data object
     cpfPage.value = 1 // reset on new search
   } catch (err) {
@@ -328,8 +347,14 @@ const getAssociatedCompanies = async (personName) => {
     const { data } = await api.getCompaniesByName(personName);
     const resultToUpdate = results.value.user_data.find(user => user.name === personName);
     if (resultToUpdate) {
-      resultToUpdate.associated_companies = data.associated_companies;
-      selectedCpfResult.value = resultToUpdate;
+      if (data.associated_companies && data.associated_companies.length > 0) {
+        resultToUpdate.associated_companies = data.associated_companies;
+        selectedCpfResult.value = resultToUpdate;
+      } else {
+        modalMessage.value = "There is no company linked to this CPF";
+        showInfoModal.value = true;
+        selectedCpfResult.value = null; // Ensure no table is shown
+      }
     }
   } catch (err) {
     console.error("Error fetching associated companies:", err);

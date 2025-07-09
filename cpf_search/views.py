@@ -91,21 +91,65 @@ def get_companies_by_name(request):
 
     try:
         conn = sqlite3.connect(cnpj_db_path)
+        conn.row_factory = sqlite3.Row  # Return rows as dictionaries
         cursor = conn.cursor()
+        
+        # The socio's CNPJ is the full CNPJ, so we extract the basic part for joining.
         cursor.execute("""
-            SELECT DISTINCT s.cnpj, e.razao_social, e.capital_social
+            SELECT
+                s.cnpj,
+                e.razao_social,
+                e.natureza_juridica,
+                e.porte_empresa,
+                e.capital_social,
+                est.nome_fantasia,
+                est.situacao_cadastral,
+                est.data_situacao_cadastral,
+                est.motivo_situacao_cadastral
             FROM socios s
-            JOIN empresas e ON s.cnpj_basico = e.cnpj_basico
-            WHERE s.nome_socio = ?
+            JOIN empresas e ON SUBSTR(s.cnpj, 1, 8) = e.cnpj_basico
+            JOIN estabelecimento est ON SUBSTR(s.cnpj, 1, 8) = est.cnpj_basico
+            WHERE s.nome_socio = ? AND est.matriz_filial = '1'
         """, (person_name,))
+        
         company_details = cursor.fetchall()
 
-        for company in company_details:
+        # Description lookups
+        def get_description(table_name, code):
+            if code is None or not code.strip():
+                return None
+            # Use a new cursor for lookups to not interfere with the main query
+            lookup_cursor = conn.cursor()
+            lookup_cursor.execute(f"SELECT descricao FROM {table_name} WHERE codigo = ?", (code,))
+            result = lookup_cursor.fetchone()
+            return result['descricao'] if result else None
+
+        porte_mapping = {
+            '01': 'MICRO EMPRESA',
+            '03': 'EMPRESA DE PEQUENO PORTE',
+            '05': 'DEMAIS'
+        }
+
+        for company_row in company_details:
+            company = dict(company_row)
+            
+            situacao_cadastral_desc = get_description('motivo', company['situacao_cadastral'])
+            motivo_situacao_desc = get_description('motivo', company['motivo_situacao_cadastral'])
+            natureza_juridica_desc = get_description('natureza_juridica', company['natureza_juridica'])
+            porte_desc = porte_mapping.get(company['porte_empresa'], 'NAO INFORMADO')
+
             associated_companies.append({
-                'cnpj': company[0],
-                'razao_social': company[1],
-                'capital_social': company[2]
+                'cnpj': company['cnpj'],
+                'razao_social': company['razao_social'],
+                'nome_fantasia': company['nome_fantasia'],
+                'natureza_juridica': natureza_juridica_desc,
+                'porte': porte_desc,
+                'capital_social': company['capital_social'],
+                'situacao_cadastral': situacao_cadastral_desc,
+                'data_situacao_cadastral': company['data_situacao_cadastral'],
+                'motivo_situacao_cadastral': motivo_situacao_desc
             })
+
     except sqlite3.Error as e:
         return Response({'error': f'Database error: {e}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     finally:
