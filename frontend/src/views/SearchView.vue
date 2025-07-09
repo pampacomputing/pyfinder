@@ -317,6 +317,11 @@ const performSearch = async (searchType = 'cpf') => {
 }
 
 const getAssociatedCompanies = async (personName) => {
+  if (selectedCpfResult.value && selectedCpfResult.value.name === personName) {
+    selectedCpfResult.value = null;
+    return;
+  }
+
   if (!personName) return;
   loading.value = true;
   try {
