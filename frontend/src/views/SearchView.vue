@@ -95,8 +95,11 @@ import unidecode from 'unidecode';
 
 /* --- API ----------------------------------------------------------------- */
 let debounceTimer = null
+let latestRequest = null;
 
 const performSearch = async (searchType = 'cpf') => {
+  const currentRequest = Symbol();
+  latestRequest = currentRequest;
 
   // Basic validation for CPF and CNPJ
   const cleanCpf = searchCriteria.value.cpf.replace(/[^0-9]/g, '');
@@ -134,16 +137,25 @@ const performSearch = async (searchType = 'cpf') => {
       responseData = data;
     }
 
-    results.value = responseData // Store the entire data object
-    cpfPage.value = 1 // reset on new search
+    if (latestRequest === currentRequest) {
+      results.value = responseData // Store the entire data object
+      cpfPage.value = 1 // reset on new search
+    }
   } catch {
-    results.value = null
+    if (latestRequest === currentRequest) {
+      results.value = null
+    }
   } finally {
-    loading.value = false
+    if (latestRequest === currentRequest) {
+      loading.value = false
+    }
   }
 }
 
 const getAssociatedCompanies = async (personName, personCpf) => {
+  const currentRequest = Symbol();
+  latestRequest = currentRequest;
+
   if (selectedCpfResult.value && selectedCpfResult.value.name === personName) {
     selectedCpfResult.value = null;
     return;
@@ -153,59 +165,63 @@ const getAssociatedCompanies = async (personName, personCpf) => {
   loading.value = true;
   try {
     const { data } = await api.getCompaniesByName(personName, personCpf);
-    const resultToUpdate = results.value.user_data.find(user => user.name === personName);
-    if (resultToUpdate) {
-      if (data.associated_companies && data.associated_companies.length > 0) {
-        resultToUpdate.associated_companies = data.associated_companies;
-        selectedCpfResult.value = resultToUpdate;
-      } else {
-        modalMessage.value = "There is no company linked to this CPF";
-        showInfoModal.value = true;
-        selectedCpfResult.value = null; // Ensure no table is shown
+    if (latestRequest === currentRequest) {
+      const resultToUpdate = results.value.user_data.find(user => user.name === personName);
+      if (resultToUpdate) {
+        if (data.associated_companies && data.associated_companies.length > 0) {
+          resultToUpdate.associated_companies = data.associated_companies;
+          selectedCpfResult.value = resultToUpdate;
+        } else {
+          modalMessage.value = "There is no company linked to this CPF";
+          showInfoModal.value = true;
+          selectedCpfResult.value = null; // Ensure no table is shown
+        }
       }
     }
   } catch (err) {
     console.error("Error fetching associated companies:", err);
   } finally {
-    loading.value = false;
+    if (latestRequest === currentRequest) {
+      loading.value = false;
+    }
   }
 };
 
-const performSearchNow = () => {
-  clearTimeout(debounceTimer)
-  performSearch('cpf') // Default to CPF search
-}
+const performSearchNow = async () => {
+  clearTimeout(debounceTimer);
+  await performSearch('cpf'); // Default to CPF search
+  searchCriteria.value.name = '';
+  searchCriteria.value.cpf = '';
+};
 
 const performCnpjSearch = async () => {
-  clearTimeout(debounceTimer)
+  const currentRequest = Symbol();
+  latestRequest = currentRequest;
+
+  clearTimeout(debounceTimer);
   loading.value = true;
   selectedCpfResult.value = null;
   selectedCompanyData.value = null;
 
   try {
     const { data } = await api.cnpjSearch({ cnpj: searchCriteria.value.cnpj });
-    results.value = data;
+    if (latestRequest === currentRequest) {
+      results.value = data;
+    }
   } catch (err) {
     console.error("CNPJ search error:", err);
-    results.value = null;
-    modalMessage.value = "Error searching CNPJ. Please try again.";
-    showInfoModal.value = true;
+    if (latestRequest === currentRequest) {
+      results.value = null;
+      modalMessage.value = "Error searching CNPJ. Please try again.";
+      showInfoModal.value = true;
+    }
   } finally {
-    loading.value = false;
+    if (latestRequest === currentRequest) {
+      loading.value = false;
+      searchCriteria.value.cnpj = '';
+    }
   }
 };
-
-watch(
-  searchCriteria,
-  () => {
-    clearTimeout(debounceTimer)
-    // Only debounce if both CPF and CNPJ are empty, otherwise search immediately
-    if (!searchCriteria.value.cpf && !searchCriteria.value.cnpj && !searchCriteria.value.name) {
-      debounceTimer = setTimeout(() => performSearch('cpf'), 500);
-    }
-  },
-  { deep: true }
-)
 
 onMounted(() => {
   // Make an initial API call to a protected endpoint to validate the session

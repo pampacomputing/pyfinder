@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework import status
 import re
 from django.conf import settings
-import threading
+from db_utils import get_cnpj_db_connection, get_basecpf_db_connection
 
 
 class CNPJSearchView(APIView):
@@ -36,82 +36,52 @@ class CNPJSearchView(APIView):
         cnpj_ordem = cnpj_digits[8:12]
         cnpj_dv = cnpj_digits[12:14]
 
-        cnpj_db_path = settings.DATABASES["cnpj_db"]["NAME"]
-        basecpf_db_path = settings.DATABASES["default"]["NAME"]
-
-        # Data containers for threads
-        empresa_data = [None]
-        estabelecimento_data = [None]
-        simples_data = [None]
-        socios_data = [None]
-
-        def fetch_cnpj_data():
-            cnpj_conn = sqlite3.connect(cnpj_db_path)
-            cnpj_cursor = cnpj_conn.cursor()
-            try:
-                empresa_data[0] = self._query_empresa(cnpj_cursor, cnpj_basico)
-                estabelecimento_data[0] = self._query_estabelecimento(
-                    cnpj_cursor, cnpj_basico, cnpj_ordem, cnpj_dv
-                )
-                simples_data[0] = self._query_simples(cnpj_cursor, cnpj_basico)
-                socios_data[0] = self._query_socios(cnpj_cursor, cnpj_basico)
-            finally:
-                cnpj_conn.close()
-
-        # Run CNPJ data fetching in a separate thread
-        cnpj_thread = threading.Thread(target=fetch_cnpj_data)
-        cnpj_thread.start()
-        cnpj_thread.join()  # Wait for CNPJ data to be fetched
-
-        if not empresa_data[0]:
-            return Response(
-                {"error": "CNPJ not found."}, status=status.HTTP_404_NOT_FOUND
-            )
-
-        # Now enrich data and fetch CPF details for socios
-        cnpj_conn_for_enrichment = sqlite3.connect(
-            cnpj_db_path
-        )  # New connection for enrichment
-        cnpj_cursor_for_enrichment = cnpj_conn_for_enrichment.cursor()
+        cnpj_conn = get_cnpj_db_connection()
+        cnpj_cursor = cnpj_conn.cursor()
 
         try:
+            empresa_data = self._query_empresa(cnpj_cursor, cnpj_basico)
+            if not empresa_data:
+                return Response(
+                    {"error": "CNPJ not found."}, status=status.HTTP_404_NOT_FOUND
+                )
+
+            estabelecimento_data = self._query_estabelecimento(
+                cnpj_cursor, cnpj_basico, cnpj_ordem, cnpj_dv
+            )
+            simples_data = self._query_simples(cnpj_cursor, cnpj_basico)
+            socios_data = self._query_socios(cnpj_cursor, cnpj_basico)
+
             enriched_empresa = self._enrich_empresa_data(
-                cnpj_cursor_for_enrichment, empresa_data[0]
+                cnpj_cursor, empresa_data
             )
             enriched_estabelecimento = self._enrich_estabelecimento_data(
-                cnpj_cursor_for_enrichment, estabelecimento_data[0]
+                cnpj_cursor, estabelecimento_data
             )
-            enriched_simples = self._enrich_simples_data(simples_data[0])
+            enriched_simples = self._enrich_simples_data(simples_data)
 
-            # Fetch CPF data for socios in a separate thread
-            enriched_socios_result = [None]
+            basecpf_conn = get_basecpf_db_connection()
+            basecpf_cursor = basecpf_conn.cursor()
+            try:
+                enriched_socios = self._enrich_socios_data_optimized(
+                    basecpf_cursor, cnpj_cursor, socios_data
+                )
+            finally:
+                basecpf_conn.close()
 
-            def enrich_socios_thread_target():
-                basecpf_conn = sqlite3.connect(basecpf_db_path)
-                basecpf_cursor = basecpf_conn.cursor()
-                try:
-                    enriched_socios_result[0] = self._enrich_socios_data(
-                        basecpf_cursor, socios_data[0]
-                    )
-                finally:
-                    basecpf_conn.close()
-
-            socios_thread = threading.Thread(target=enrich_socios_thread_target)
-            socios_thread.start()
-            socios_thread.join()
 
             response_data = self._assemble_json(
                 cnpj_digits,
                 enriched_empresa,
                 enriched_estabelecimento,
                 enriched_simples,
-                enriched_socios_result[0],
+                enriched_socios,
             )
 
             return Response(response_data, status=status.HTTP_200_OK)
 
         finally:
-            cnpj_conn_for_enrichment.close()
+            cnpj_conn.close()
 
     def _validate_cnpj_check_digits(self, cnpj):
         def calculate_dv(cnpj_part, weights):
@@ -218,9 +188,34 @@ class CNPJSearchView(APIView):
         result = cursor.fetchone()
         return result[0] if result else None
 
+    def _get_descriptions_in_batch(self, cursor, table_name, codes):
+        if not codes:
+            return {}
+        
+        unique_codes = list(set(codes))
+        
+        query = f"""
+            SELECT codigo, descricao
+            FROM {table_name}
+            WHERE codigo IN ({','.join(['?'] * len(unique_codes))})
+        """
+        cursor.execute(query, unique_codes)
+        
+        return {row[0]: row[1] for row in cursor.fetchall()}
+
     def _enrich_empresa_data(self, cursor, data):
         if not data:
             return {}
+
+        codes_to_fetch = {
+            "natureza_juridica": [data[1]],
+            "qualificacao_socio": [data[2]]
+        }
+
+        descriptions = {
+            table: self._get_descriptions_in_batch(cursor, table, codes)
+            for table, codes in codes_to_fetch.items()
+        }
 
         porte_mapping = {
             "01": "MICRO EMPRESA",
@@ -233,15 +228,11 @@ class CNPJSearchView(APIView):
             "razao_social": data[0],
             "natureza_juridica": {
                 "codigo": data[1],
-                "descricao": self._get_description(
-                    cursor, "natureza_juridica", data[1]
-                ),
+                "descricao": descriptions.get("natureza_juridica", {}).get(data[1]),
             },
             "qualificacao_responsavel": {
                 "codigo": data[2],
-                "descricao": self._get_description(
-                    cursor, "qualificacao_socio", data[2]
-                ),
+                "descricao": descriptions.get("qualificacao_socio", {}).get(data[2]),
             },
             "porte": porte_descricao,
             "ente_federativo_responsavel": data[4],
@@ -251,15 +242,31 @@ class CNPJSearchView(APIView):
     def _enrich_estabelecimento_data(self, cursor, data):
         if not data:
             return {}
+
+        cnae_codes = [data[10]]
+        if data[11]:
+            cnae_codes.extend([c.strip() for c in data[11].split(",")])
+
+        codes_to_fetch = {
+            "motivo": [data[4], data[6]],
+            "pais": [data[8]],
+            "cnae": cnae_codes,
+            "municipio": [data[19]],
+        }
+
+        descriptions = {
+            table: self._get_descriptions_in_batch(cursor, table, codes)
+            for table, codes in codes_to_fetch.items()
+        }
+
         cnae_fiscal_secundaria = []
         if data[11]:  # cnae_fiscal_secundaria
-            for cnae_code in data[11].split(","):  # Assuming comma-separated
+            for cnae_code in data[11].split(","):
+                cnae_code = cnae_code.strip()
                 cnae_fiscal_secundaria.append(
                     {
-                        "codigo": cnae_code.strip(),
-                        "descricao": self._get_description(
-                            cursor, "cnae", cnae_code.strip()
-                        ),
+                        "codigo": cnae_code,
+                        "descricao": descriptions.get("cnae", {}).get(cnae_code),
                     }
                 )
 
@@ -270,22 +277,22 @@ class CNPJSearchView(APIView):
             "nome_fantasia": data[3],
             "situacao_cadastral": {
                 "codigo": data[4],
-                "descricao": self._get_description(cursor, "motivo", data[6]),
+                "descricao": descriptions.get("motivo", {}).get(data[4]),
             },
             "data_situacao_cadastral": data[5],
             "motivo_situacao_cadastral": {
                 "codigo": data[6],
-                "descricao": self._get_description(cursor, "motivo", data[6]),
+                "descricao": descriptions.get("motivo", {}).get(data[6]),
             },
             "nome_cidade_exterior": data[7],
             "pais": {
                 "codigo": data[8],
-                "descricao": self._get_description(cursor, "pais", data[8]),
+                "descricao": descriptions.get("pais", {}).get(data[8]),
             },
             "data_inicio_atividades": data[9],
             "cnae_principal": {
                 "codigo": data[10],
-                "descricao": self._get_description(cursor, "cnae", data[10]),
+                "descricao": descriptions.get("cnae", {}).get(data[10]),
             },
             "cnae_secundarias": cnae_fiscal_secundaria,
             "tipo_logradouro": data[12],
@@ -297,7 +304,7 @@ class CNPJSearchView(APIView):
             "uf": data[18],
             "municipio": {
                 "codigo": data[19],
-                "descricao": self._get_description(cursor, "municipio", data[19]),
+                "descricao": descriptions.get("municipio", {}).get(data[19]),
             },
             "ddd1": data[20],
             "telefone1": data[21],
@@ -322,6 +329,79 @@ class CNPJSearchView(APIView):
             "data_exclusao_mei": data[5],
         }
 
+    def _enrich_socios_data_optimized(self, basecpf_cursor, cnpj_cursor, socios_data):
+        if not socios_data:
+            return []
+
+        # Step 1: Collect all unique partner names
+        partner_names = list(set([socio[0] for socio in socios_data]))
+
+        # Step 2: Fetch all potential CPF matches for these names in one query
+        query = f"""
+            SELECT cpf, sexo, nasc, nome
+            FROM cpf
+            WHERE nome IN ({','.join(['?'] * len(partner_names))})
+        """
+        basecpf_cursor.execute(query, partner_names)
+        potential_matches = basecpf_cursor.fetchall()
+
+        # Step 3: Organize potential matches by name for quick lookup
+        matches_by_name = {}
+        for match in potential_matches:
+            name = match[3]
+            if name not in matches_by_name:
+                matches_by_name[name] = []
+            matches_by_name[name].append(match)
+
+        # Step 4: Process partners, matching them with the fetched data in memory
+        enriched_socios = []
+        for socio in socios_data:
+            nome_socio = socio[0]
+            cnpj_cpf_socio_masked = socio[1]
+            cpf_value, sexo, data_nascimento = None, None, None
+
+            # Find the correct partner from the in-memory list
+            if nome_socio in matches_by_name:
+                for potential_match in matches_by_name[nome_socio]:
+                    full_cpf = potential_match[0]
+                    if self._mask_cpf(full_cpf) == cnpj_cpf_socio_masked:
+                        cpf_value = full_cpf
+                        sexo = potential_match[1]
+                        data_nascimento = potential_match[2]
+                        break  # Found the correct person
+
+            enriched_socios.append(
+                {
+                    "cpf": cpf_value,
+                    "nome": nome_socio,
+                    "sexo": sexo,
+                    "data_nascimento": data_nascimento,
+                    "qualificacao_socio": {
+                        "codigo": socio[2],
+                        "descricao": self._get_description(
+                            cnpj_cursor, "qualificacao_socio", socio[2]
+                        ),
+                    },
+                    "data_entrada_sociedade": socio[3],
+                    "pais": {
+                        "codigo": socio[4],
+                        "descricao": self._get_description(
+                            cnpj_cursor, "pais", socio[4]
+                        ),
+                    },
+                    "representante_legal": socio[5],
+                    "nome_representante": socio[6],
+                    "qualificacao_representante_legal": {
+                        "codigo": socio[7],
+                        "descricao": self._get_description(
+                            cnpj_cursor, "qualificacao_socio", socio[7]
+                        ),
+                    },
+                    "faixa_etaria": socio[8],
+                }
+            )
+        return enriched_socios
+
     def _mask_cpf(self, cpf):
         """Masks a CPF string according to the rule: ***...**"""
         if not cpf or not isinstance(cpf, str):
@@ -331,78 +411,7 @@ class CNPJSearchView(APIView):
             return ""
         return f"***{cpf_digits[3:9]}**"
 
-    def _enrich_socios_data(self, basecpf_cursor, socios_data):
-        enriched_socios = []
-        cnpj_db_path = settings.DATABASES["cnpj_db"]["NAME"]
-        cnpj_conn_local = sqlite3.connect(cnpj_db_path)
-        cnpj_cursor_local = cnpj_conn_local.cursor()
-
-        try:
-            for socio in socios_data:
-                nome_socio = socio[0]
-                cnpj_cpf_socio_masked = socio[1]
-                cpf_value = None
-                sexo = None
-                data_nascimento = None
-
-                # Find potential matches by name in basecpf.db
-                basecpf_cursor.execute(
-                    """
-                    SELECT cpf, sexo, nasc
-                    FROM cpf
-                    WHERE nome = ?;
-                """,
-                    (nome_socio,),
-                )
-
-                potential_matches = basecpf_cursor.fetchall()
-
-                for potential_match in potential_matches:
-                    full_cpf = potential_match[0]
-
-                    # Mask the full CPF from basecpf.db to compare
-                    calculated_masked_cpf = self._mask_cpf(full_cpf)
-
-                    if calculated_masked_cpf == cnpj_cpf_socio_masked:
-                        # We found the correct person
-                        cpf_value = full_cpf
-                        sexo = potential_match[1]
-                        data_nascimento = potential_match[2]
-                        break  # Stop searching once a match is found
-
-                enriched_socios.append(
-                    {
-                        "cpf": cpf_value,
-                        "nome": socio[0],
-                        "sexo": sexo,
-                        "data_nascimento": data_nascimento,
-                        "qualificacao_socio": {
-                            "codigo": socio[2],
-                            "descricao": self._get_description(
-                                cnpj_cursor_local, "qualificacao_socio", socio[2]
-                            ),
-                        },
-                        "data_entrada_sociedade": socio[3],
-                        "pais": {
-                            "codigo": socio[4],
-                            "descricao": self._get_description(
-                                cnpj_cursor_local, "pais", socio[4]
-                            ),
-                        },
-                        "representante_legal": socio[5],
-                        "nome_representante": socio[6],
-                        "qualificacao_representante_legal": {
-                            "codigo": socio[7],
-                            "descricao": self._get_description(
-                                cnpj_cursor_local, "qualificacao_socio", socio[7]
-                            ),
-                        },
-                        "faixa_etaria": socio[8],
-                    }
-                )
-            return enriched_socios
-        finally:
-            cnpj_conn_local.close()
+    
 
     def _assemble_json(self, cnpj_digits, empresa, estabelecimento, simples, socios):
         # Mapping for porte_empresa is now handled in _enrich_empresa_data

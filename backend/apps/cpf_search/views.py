@@ -1,3 +1,4 @@
+from db_utils import get_cnpj_db_connection
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -8,7 +9,7 @@ import sqlite3
 from django.conf import settings
 import re
 
-import concurrent.futures
+
 from django.db import connections
 
 
@@ -55,9 +56,7 @@ def search_cpf(request):
                 connections.close_all()
                 return list(Cpf.objects.filter(cpf_conditions)[:1000])
 
-            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-                future = executor.submit(execute_cpf_query)
-                cpf_results = future.result()
+            cpf_results = execute_cpf_query()
 
             cpf_serializer = CpfSerializer(cpf_results, many=True)
 
@@ -93,7 +92,6 @@ def get_companies_by_name(request):
             {"error": "Name and CPF are required."}, status=status.HTTP_400_BAD_REQUEST
         )
 
-    # Mask the CPF
     clean_cpf = re.sub(r"\D", "", person_cpf)
     if len(clean_cpf) != 11:
         return Response(
@@ -101,90 +99,91 @@ def get_companies_by_name(request):
         )
     masked_cpf = f"***{clean_cpf[3:9]}**"
 
-    cnpj_db_path = settings.DATABASES["cnpj_db"]["NAME"]
-    associated_companies = []
+    def execute_query_and_process_data():
+        conn = None
+        try:
+            conn = get_cnpj_db_connection()
+            cursor = conn.cursor()
+
+            cursor.execute(
+                """
+                SELECT
+                    s.cnpj,
+                    e.razao_social,
+                    e.natureza_juridica,
+                    e.porte_empresa,
+                    e.capital_social,
+                    est.nome_fantasia,
+                    est.situacao_cadastral,
+                    est.data_situacao_cadastral,
+                    est.motivo_situacao_cadastral
+                FROM socios s
+                JOIN empresas e ON SUBSTR(s.cnpj, 1, 8) = e.cnpj_basico
+                JOIN estabelecimento est ON SUBSTR(s.cnpj, 1, 8) = est.cnpj_basico
+                WHERE s.nome_socio = ? AND s.cnpj_cpf_socio = ? AND est.matriz_filial = '1'
+            """,
+                (person_name, masked_cpf),
+            )
+            company_details = cursor.fetchall()
+
+            if not company_details:
+                return []
+
+            def get_description(table_name, code):
+                if code is None or not code.strip():
+                    return None
+                cursor.execute(
+                    f"SELECT descricao FROM {table_name} WHERE codigo = ?", (code,)
+                )
+                result = cursor.fetchone()
+                return result["descricao"] if result else None
+
+            porte_mapping = {
+                "01": "MICRO EMPRESA",
+                "03": "EMPRESA DE PEQUENO PORTE",
+                "05": "DEMAIS",
+            }
+
+            associated_companies = []
+            for company_row in company_details:
+                company = dict(company_row)
+                situacao_cadastral_desc = get_description(
+                    "motivo", company["situacao_cadastral"]
+                )
+                motivo_situacao_desc = get_description(
+                    "motivo", company["motivo_situacao_cadastral"]
+                )
+                natureza_juridica_desc = get_description(
+                    "natureza_juridica", company["natureza_juridica"]
+                )
+                porte_desc = porte_mapping.get(company["porte_empresa"], "NAO INFORMADO")
+
+                associated_companies.append(
+                    {
+                        "cnpj": company["cnpj"],
+                        "razao_social": company["razao_social"],
+                        "nome_fantasia": company["nome_fantasia"],
+                        "natureza_juridica": natureza_juridica_desc,
+                        "porte": porte_desc,
+                        "capital_social": company["capital_social"],
+                        "situacao_cadastral": situacao_cadastral_desc,
+                        "data_situacao_cadastral": company["data_situacao_cadastral"],
+                        "motivo_situacao_cadastral": motivo_situacao_desc,
+                    }
+                )
+            return associated_companies
+        finally:
+            if conn:
+                conn.close()
 
     try:
-        conn = sqlite3.connect(cnpj_db_path)
-        conn.row_factory = sqlite3.Row  # Return rows as dictionaries
-        cursor = conn.cursor()
+        associated_companies = execute_query_and_process_data()
 
-        cursor.execute(
-            """
-            SELECT
-                s.cnpj,
-                e.razao_social,
-                e.natureza_juridica,
-                e.porte_empresa,
-                e.capital_social,
-                est.nome_fantasia,
-                est.situacao_cadastral,
-                est.data_situacao_cadastral,
-                est.motivo_situacao_cadastral
-            FROM socios s
-            JOIN empresas e ON SUBSTR(s.cnpj, 1, 8) = e.cnpj_basico
-            JOIN estabelecimento est ON SUBSTR(s.cnpj, 1, 8) = est.cnpj_basico
-            WHERE s.nome_socio = ? AND s.cnpj_cpf_socio = ? AND est.matriz_filial = '1'
-        """,
-            (person_name, masked_cpf),
-        )
-
-        company_details = cursor.fetchall()
-
-        # Description lookups
-        def get_description(table_name, code):
-            if code is None or not code.strip():
-                return None
-            lookup_cursor = conn.cursor()
-            lookup_cursor.execute(
-                f"SELECT descricao FROM {table_name} WHERE codigo = ?", (code,)
-            )
-            result = lookup_cursor.fetchone()
-            return result["descricao"] if result else None
-
-        porte_mapping = {
-            "01": "MICRO EMPRESA",
-            "03": "EMPRESA DE PEQUENO PORTE",
-            "05": "DEMAIS",
-        }
-
-        for company_row in company_details:
-            company = dict(company_row)
-
-            situacao_cadastral_desc = get_description(
-                "motivo", company["situacao_cadastral"]
-            )
-            motivo_situacao_desc = get_description(
-                "motivo", company["motivo_situacao_cadastral"]
-            )
-            natureza_juridica_desc = get_description(
-                "natureza_juridica", company["natureza_juridica"]
-            )
-            porte_desc = porte_mapping.get(company["porte_empresa"], "NAO INFORMADO")
-
-            associated_companies.append(
-                {
-                    "cnpj": company["cnpj"],
-                    "razao_social": company["razao_social"],
-                    "nome_fantasia": company["nome_fantasia"],
-                    "natureza_juridica": natureza_juridica_desc,
-                    "porte": porte_desc,
-                    "capital_social": company["capital_social"],
-                    "situacao_cadastral": situacao_cadastral_desc,
-                    "data_situacao_cadastral": company["data_situacao_cadastral"],
-                    "motivo_situacao_cadastral": motivo_situacao_desc,
-                }
-            )
-
-    except sqlite3.Error as e:
         return Response(
-            {"error": f"Database error: {e}"},
+            {"associated_companies": associated_companies}, status=status.HTTP_200_OK
+        )
+    except Exception as e:
+        return Response(
+            {"error": f"An unexpected error occurred: {e}"},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
-    finally:
-        if conn:
-            conn.close()
-
-    return Response(
-        {"associated_companies": associated_companies}, status=status.HTTP_200_OK
-    )
