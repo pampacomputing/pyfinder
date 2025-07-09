@@ -11,6 +11,7 @@
           @update:searchCriteria="updateSearchCriteria"
           @performSearchNow="performSearchNow"
           @performCnpjSearch="performCnpjSearch"
+          @validationError="handleValidationError"
         />
       </div>
     </div>
@@ -66,6 +67,11 @@ const modalMessage = ref('');
 
 const updateSearchCriteria = (newCriteria) => {
   searchCriteria.value = newCriteria;
+};
+
+const handleValidationError = (message) => {
+  modalMessage.value = message;
+  showInfoModal.value = true;
 };
 
 /* --- pagination for CPF results ------------------------------------------ */
@@ -169,63 +175,21 @@ const performSearchNow = () => {
 
 const performCnpjSearch = async () => {
   clearTimeout(debounceTimer)
-  const cleanCnpj = searchCriteria.value.cnpj.replace(/[^0-9]/g, '');
-
-  if (!cleanCnpj || cleanCnpj.length !== 14) {
-    alert("CNPJ must have 14 digits.");
-    results.value = null;
-    return;
-  }
-
-  if (!validateCnpjCheckDigits(cleanCnpj)) {
-    alert("Invalid CNPJ check digits.");
-    results.value = null;
-    return;
-  }
-
   loading.value = true;
   selectedCpfResult.value = null;
   selectedCompanyData.value = null;
 
   try {
-    const { data } = await api.cnpjSearch({ cnpj: cleanCnpj });
+    const { data } = await api.cnpjSearch({ cnpj: searchCriteria.value.cnpj });
     results.value = data;
   } catch (err) {
     console.error("CNPJ search error:", err);
     results.value = null;
-    alert("Error searching CNPJ. Please try again.");
+    modalMessage.value = "Error searching CNPJ. Please try again.";
+    showInfoModal.value = true;
   } finally {
     loading.value = false;
   }
-};
-
-const validateCnpjCheckDigits = (cnpj) => {
-  function calculateDv(cnpjPart, weights) {
-    let total = 0;
-    for (let i = 0; i < cnpjPart.length; i++) {
-      total += parseInt(cnpjPart[i]) * weights[i];
-    }
-    let remainder = total % 11;
-    return remainder < 2 ? 0 : 11 - remainder;
-  }
-
-  const cnpj12Digits = cnpj.substring(0, 12);
-  const weights1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
-  const dv1Calculated = calculateDv(cnpj12Digits, weights1);
-
-  if (parseInt(cnpj[12]) !== dv1Calculated) {
-    return false;
-  }
-
-  const cnpj13Digits = cnpj.substring(0, 13);
-  const weights2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
-  const dv2Calculated = calculateDv(cnpj13Digits, weights2);
-
-  if (parseInt(cnpj[13]) !== dv2Calculated) {
-    return false;
-  }
-
-  return true;
 };
 
 watch(
