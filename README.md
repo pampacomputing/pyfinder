@@ -1,56 +1,54 @@
-# pyfinder
-Multiprocessing client-server python application to find people inside security department database.
+# PyFinder
 
-## Prerequisites
-- Python 3.x
-- Node.js and npm
+PyFinder is a client-server application for searching security department databases.
 
-## Backend Installation
-1. Navigate to the `pyfinder_django` directory:
-   ```bash
-   cd pyfinder_django
-   ```
-2. Create a Python virtual environment:
-   ```bash
-   python -m venv venv
-   ```
-3. Activate the virtual environment:
-   - On Windows:
-     ```bash
-     .\venv\Scripts\activate
-     ```
-   - On macOS/Linux:
-     ```bash
-     source venv/bin/activate
-     ```
-4. Install the backend dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
+## How to Set Up and Run the Application
 
-## Frontend Installation
-1. Navigate to the `frontend` directory:
-   ```bash
-   cd frontend
-   ```
-2. Install the frontend dependencies:
-   ```bash
-   npm install
-   ```
+### 1. Setup
 
-## Running the Application
+To get started, run the setup script for your operating system. This will install all the necessary dependencies for both the backend and frontend.
 
-### Backend (Django)
-1. Navigate to the `pyfinder_django` directory.
-2. Activate your virtual environment (if not already active).
-3. Run the Django development server:
-   ```bash
-   python manage.py runserver
-   ```
+-   **For Windows:**
+    ```cmd
+    setup.bat
+    ```
+-   **For Linux/macOS:**
+    ```bash
+    chmod +x setup.sh
+    ./setup.sh
+    ```
 
-### Frontend (Vue.js)
-1. Navigate to the `frontend` directory.
-2. Start the Vue.js development server:
-   ```bash
-   npm run dev
-   ```
+### 2. Start the Application
+
+After the setup is complete, run the start script for your operating system. This will launch the backend and frontend servers in separate terminal windows.
+
+-   **For Windows:**
+    ```cmd
+    start.bat
+    ```
+-   **For Linux/macOS:**
+    ```bash
+    chmod +x start.sh
+    ./start.sh
+    ```
+
+### 3. Access the Application
+
+Once the servers are running, you can access the PyFinder application in your web browser by navigating to:
+
+[**http://localhost:5173**](http://localhost:5173)
+
+---
+
+## How to Use the Application
+
+### CPF Search
+
+You can search for an individual's information in two ways:
+
+1.  **By CPF:** Enter the full CPF number into the search field.
+2.  **By Name:** Enter the person's full or partial name. The search will return all matching records.
+
+### CNPJ Search
+
+To search for a company's information, enter the full CNPJ number into the designated search field. The application will retrieve and display the company's details.

@@ -3,7 +3,7 @@
   <div class="container-fluid mt-4 px-0">
     <h1 class="mb-4 text-center">PyFinder – Advanced Search</h1>
 
-    <!-- ▸ SEARCH CRITERIA --------------------------------------------------- -->
+    <!-- ▸ SEARCH --------------------------------------------------- -->
     <div class="row justify-content-center gx-0">
       <div class="col-12 col-lg-10 col-xxl-8 px-0">
         <SearchBar
