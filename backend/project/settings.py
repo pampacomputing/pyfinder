@@ -89,18 +89,21 @@ WSGI_APPLICATION = "project.wsgi.application"
 
 # Database configuration
 # Set the path to your existing SQLite database
+DB_DIR = BASE_DIR.parent / "db"
+DB_DIR.mkdir(parents=True, exist_ok=True)
+
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR.parent / "db" / "django.db",
+        "NAME": DB_DIR / "django.db",
     },
     "basecpf_db": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR.parent / "db" / "basecpf.db",
+        "NAME": DB_DIR / "basecpf.db",
     },
     "cnpj_db": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR.parent / "db" / "cnpj.db",
+        "NAME": DB_DIR / "cnpj.db",
     },
 }
 
