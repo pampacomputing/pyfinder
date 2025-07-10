@@ -132,6 +132,37 @@
             </div>
           </div>
 
+          <!-- CNPJ Address Data -->
+          <div v-if="results.empresa && results.empresa.endereco" class="mt-4">
+            <h5 class="card-title p-3">Address</h5>
+            <div class="table-container table-responsive">
+              <table class="table table-dark table-striped table-hover m-0">
+                <thead>
+                  <tr>
+                    <th>Street</th>
+                    <th>Number</th>
+                    <th>Complement</th>
+                    <th>Neighborhood</th>
+                    <th>City</th>
+                    <th>State</th>
+                    <th>ZIP Code</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>{{ results.empresa.endereco.logradouro }}</td>
+                    <td>{{ results.empresa.endereco.numero }}</td>
+                    <td>{{ results.empresa.endereco.complemento }}</td>
+                    <td>{{ results.empresa.endereco.bairro }}</td>
+                    <td>{{ results.empresa.endereco.municipio.descricao }}</td>
+                    <td>{{ results.empresa.endereco.uf }}</td>
+                    <td>{{ results.empresa.endereco.cep }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
           <!-- CNPJ Partner Data (Subtable) -->
           <div v-if="results.socios && results.socios.length > 0" class="mt-4">
             <h5 class="card-title p-3">Partner Data for {{ results.empresa.razao_social }}</h5>
