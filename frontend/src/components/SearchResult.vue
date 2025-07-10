@@ -44,26 +44,40 @@
                                 <th>CNPJ</th>
                                 <th>Company Name</th>
                                 <th>Trade Name</th>
-                                <th>Legal Nature</th>
-                                <th>Size</th>
-                                <th>Capital Stock</th>
-                                <th>Registration Status</th>
-                                <th>Registration Date</th>
-                                <th>Registration Status Reason</th>
                               </tr>
                             </thead>
                             <tbody>
-                              <tr v-for="(company, companyIdx) in selectedCpfResult.associated_companies" :key="companyIdx">
+                              <template v-for="(company, companyIdx) in selectedCpfResult.associated_companies" :key="companyIdx">
+                                <tr @click="toggleCompanyDetails(company)" class="company-row">
                                 <td>{{ formatCnpj(company.cnpj) }}</td>
                                 <td>{{ company.razao_social }}</td>
                                 <td>{{ company.nome_fantasia }}</td>
-                                <td>{{ company.natureza_juridica }}</td>
-                                <td>{{ company.porte }}</td>
-                                <td>{{ company.capital_social }}</td>
-                                <td>{{ company.situacao_cadastral }}</td>
-                                <td>{{ formatDate(company.data_situacao_cadastral) }}</td>
-                                <td>{{ company.motivo_situacao_cadastral }}</td>
                               </tr>
+                              <tr v-if="selectedCompany && selectedCompany.cnpj === company.cnpj">
+                                <td colspan="3">
+                                  <div class="p-3">
+                                    <h6 class="text-white">Company Details</h6>
+                                    <table class="table table-dark table-sm">
+                                      <tbody>
+                                        <tr><th>Legal Nature</th><td>{{ company.natureza_juridica }}</td></tr>
+                                        <tr><th>Size</th><td>{{ company.porte }}</td></tr>
+                                        <tr><th>Capital Stock</th><td>{{ company.capital_social }}</td></tr>
+                                        <tr><th>Registration Status</th><td>{{ company.situacao_cadastral }}</td></tr>
+                                        <tr><th>Registration Date</th><td>{{ formatDate(company.data_situacao_cadastral) }}</td></tr>
+                                        <tr><th>Registration Reason</th><td>{{ company.motivo_situacao_cadastral }}</td></tr>
+                                        <tr><th>Street</th><td>{{ company.endereco.logradouro }}</td></tr>
+                                        <tr><th>Number</th><td>{{ company.endereco.numero }}</td></tr>
+                                        <tr><th>Complement</th><td>{{ company.endereco.complemento }}</td></tr>
+                                        <tr><th>Neighborhood</th><td>{{ company.endereco.bairro }}</td></tr>
+                                        <tr><th>City</th><td>{{ company.endereco.municipio }}</td></tr>
+                                        <tr><th>State</th><td>{{ company.endereco.uf }}</td></tr>
+                                        <tr><th>ZIP Code</th><td>{{ company.endereco.cep }}</td></tr>
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                </td>
+                              </tr>
+                              </template>
                             </tbody>
                           </table>
                         </div>
@@ -208,7 +222,18 @@
 </template>
 
 <script setup>
-import { defineProps, defineEmits } from 'vue';
+
+import {ref} from "vue";
+
+const selectedCompany = ref(null);
+
+const toggleCompanyDetails = (company) => {
+  if (selectedCompany.value && selectedCompany.value.cnpj === company.cnpj) {
+    selectedCompany.value = null;
+  } else {
+    selectedCompany.value = company;
+  }
+};
 
 defineProps({
   results: {
@@ -284,5 +309,8 @@ const formatGender = (genderCode) => {
   position: sticky;
   top: 0;
   z-index: 2;
+}
+.company-row {
+  cursor: pointer;
 }
 </style>

@@ -115,10 +115,18 @@ def get_companies_by_name(request):
                     est.nome_fantasia,
                     est.situacao_cadastral,
                     est.data_situacao_cadastral,
-                    est.motivo_situacao_cadastral
+                    est.motivo_situacao_cadastral,
+                    est.logradouro,
+                    est.numero,
+                    est.complemento,
+                    est.bairro,
+                    est.cep,
+                    est.uf,
+                    m.descricao as municipio
                 FROM socios s
                 JOIN empresas e ON s.cnpj_basico = e.cnpj_basico
                 JOIN estabelecimento est ON s.cnpj_basico = est.cnpj_basico
+                LEFT JOIN municipio m ON est.municipio = m.codigo
                 WHERE s.nome_socio = ? AND s.cnpj_cpf_socio = ? AND est.matriz_filial = '1'
             """,
                 (person_name, masked_cpf),
@@ -168,6 +176,15 @@ def get_companies_by_name(request):
                         "situacao_cadastral": situacao_cadastral_desc,
                         "data_situacao_cadastral": company["data_situacao_cadastral"],
                         "motivo_situacao_cadastral": motivo_situacao_desc,
+                        "endereco": {
+                            "logradouro": company["logradouro"],
+                            "numero": company["numero"],
+                            "complemento": company["complemento"],
+                            "bairro": company["bairro"],
+                            "municipio": company["municipio"],
+                            "uf": company["uf"],
+                            "cep": company["cep"],
+                        }
                     }
                 )
             return associated_companies
