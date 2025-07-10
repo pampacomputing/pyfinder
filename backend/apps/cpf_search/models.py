@@ -10,7 +10,9 @@ class Cpf(models.Model):
     sexo = models.CharField(max_length=1, null=True, blank=True)  # Gender
 
     class Meta:
-        db_table = "cpf"  # Use existing table name
+        managed = False
+        db_table = "cpf"
+        app_label = "cpf_search"  # Use existing table name
 
     def __str__(self):
         return f"{self.nome} - {self.cpf}"

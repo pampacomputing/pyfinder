@@ -92,6 +92,10 @@ WSGI_APPLICATION = "project.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR.parent / "db" / "django.db",
+    },
+    "basecpf_db": {
+        "ENGINE": "django.db.backends.sqlite3",
         "NAME": BASE_DIR.parent / "db" / "basecpf.db",
     },
     "cnpj_db": {
@@ -99,6 +103,8 @@ DATABASES = {
         "NAME": BASE_DIR.parent / "db" / "cnpj.db",
     },
 }
+
+DATABASE_ROUTERS = ["project.db_routers.AppRouter"]
 
 
 # Password validation
@@ -161,8 +167,8 @@ AUTHENTICATION_BACKENDS = (
 )
 
 SITE_ID = 1
-ACCOUNT_AUTHENTICATION_METHOD = "username_email"
-ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_LOGIN_METHODS = ("username", "email")
+ACCOUNT_SIGNUP_FIELDS = ("email",)
 ACCOUNT_UNIQUE_EMAIL = True
 ACCOUNT_USERNAME_REQUIRED = False
 ACCOUNT_EMAIL_VERIFICATION = "none"

@@ -53,8 +53,7 @@ def search_cpf(request):
                     cpf_conditions &= Q(nome__icontains=word)
 
             def execute_cpf_query():
-                connections.close_all()
-                return list(Cpf.objects.filter(cpf_conditions)[:1000])
+                return list(Cpf.objects.using('basecpf_db').filter(cpf_conditions)[:1000])
 
             cpf_results = execute_cpf_query()
 
@@ -118,8 +117,8 @@ def get_companies_by_name(request):
                     est.data_situacao_cadastral,
                     est.motivo_situacao_cadastral
                 FROM socios s
-                JOIN empresas e ON SUBSTR(s.cnpj, 1, 8) = e.cnpj_basico
-                JOIN estabelecimento est ON SUBSTR(s.cnpj, 1, 8) = est.cnpj_basico
+                JOIN empresas e ON s.cnpj_basico = e.cnpj_basico
+                JOIN estabelecimento est ON s.cnpj_basico = est.cnpj_basico
                 WHERE s.nome_socio = ? AND s.cnpj_cpf_socio = ? AND est.matriz_filial = '1'
             """,
                 (person_name, masked_cpf),
