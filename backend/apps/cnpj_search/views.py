@@ -31,27 +31,32 @@ class CNPJSearchView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # 2.2. Normalize for lookup
-        cnpj_basico = cnpj_digits[0:8]
-        cnpj_ordem = cnpj_digits[8:12]
-        cnpj_dv = cnpj_digits[12:14]
-
         cnpj_conn = get_cnpj_db_connection()
         cnpj_cursor = cnpj_conn.cursor()
 
         try:
-            empresa_data = self._query_empresa(cnpj_cursor, cnpj_basico)
-            if not empresa_data:
+            # Execute the single optimized query
+            all_data = self._execute_optimized_query(cnpj_cursor, cnpj_digits)
+
+            if not all_data:
                 return Response(
                     {"error": "CNPJ not found."}, status=status.HTTP_404_NOT_FOUND
                 )
 
-            estabelecimento_data = self._query_estabelecimento(
-                cnpj_cursor, cnpj_basico, cnpj_ordem, cnpj_dv
-            )
-            simples_data = self._query_simples(cnpj_cursor, cnpj_basico)
-            socios_data = self._query_socios(cnpj_cursor, cnpj_basico)
+            # The new query returns all data at once. We need to process it.
+            # Empresa and Estabelecimento data is the same for all rows.
+            first_row = all_data[0]
+            empresa_data = first_row[:6]
+            estabelecimento_data = first_row[6:35]
+            
+            # Socios data is different for each row, filter out rows where there is no partner
+            socios_data = [row[35:] for row in all_data if row[35] is not None]
 
+            # Simples data is queried separately as before
+            cnpj_basico = cnpj_digits[0:8]
+            simples_data = self._query_simples(cnpj_cursor, cnpj_basico)
+
+            # Enrich the data as before
             enriched_empresa = self._enrich_empresa_data(
                 cnpj_cursor, empresa_data
             )
@@ -60,6 +65,7 @@ class CNPJSearchView(APIView):
             )
             enriched_simples = self._enrich_simples_data(simples_data)
 
+            # Enrich socios data
             basecpf_conn = get_basecpf_db_connection()
             basecpf_cursor = basecpf_conn.cursor()
             try:
@@ -69,7 +75,7 @@ class CNPJSearchView(APIView):
             finally:
                 basecpf_conn.close()
 
-
+            # Assemble the final JSON response
             response_data = self._assemble_json(
                 cnpj_digits,
                 enriched_empresa,
@@ -82,6 +88,46 @@ class CNPJSearchView(APIView):
 
         finally:
             cnpj_conn.close()
+
+    def _execute_optimized_query(self, cursor, cnpj):
+        """
+        Executes a single, optimized query to fetch all CNPJ data at once.
+        """
+        query = """
+            SELECT
+                -- Empresa fields (e)
+                e.razao_social, e.natureza_juridica, e.qualificacao_responsavel,
+                e.porte_empresa, e.ente_federativo_responsavel, e.capital_social,
+
+                -- Estabelecimento fields (est)
+                est.cnpj_ordem, est.cnpj_dv, est.matriz_filial, est.nome_fantasia,
+                est.situacao_cadastral, est.data_situacao_cadastral,
+                est.motivo_situacao_cadastral, est.nome_cidade_exterior,
+                est.pais, est.data_inicio_atividades, est.cnae_fiscal,
+                est.cnae_fiscal_secundaria, est.tipo_logradouro,
+                est.logradouro, est.numero, est.complemento, est.bairro, est.cep,
+                est.uf, est.municipio, est.ddd1, est.telefone1, est.ddd2, est.telefone2,
+                est.ddd_fax, est.fax, est.correio_eletronico,
+                est.situacao_especial, est.data_situacao_especial,
+
+                -- Socios fields (s)
+                s.nome_socio, s.cnpj_cpf_socio, s.qualificacao_socio,
+                s.data_entrada_sociedade, s.pais, s.representante_legal,
+                s.nome_representante, s.qualificacao_representante_legal,
+                s.faixa_etaria
+            FROM
+                cnpj_search cs
+            JOIN
+                estabelecimento est ON cs.cnpj = est.cnpj
+            JOIN
+                empresas e ON SUBSTR(cs.cnpj, 1, 8) = e.cnpj_basico
+            LEFT JOIN
+                socios s ON cs.cnpj = s.cnpj
+            WHERE
+                cs.cnpj = ?;
+        """
+        cursor.execute(query, (cnpj,))
+        return cursor.fetchall()
 
     def _validate_cnpj_check_digits(self, cnpj):
         def calculate_dv(cnpj_part, weights):
@@ -111,41 +157,6 @@ class CNPJSearchView(APIView):
 
         return True
 
-    def _query_empresa(self, cursor, cnpj_basico):
-        cursor.execute(
-            """
-            SELECT
-                razao_social, natureza_juridica, qualificacao_responsavel,
-                porte_empresa, ente_federativo_responsavel, capital_social
-            FROM empresas
-            WHERE cnpj_basico = ?;
-        """,
-            (cnpj_basico,),
-        )
-        return cursor.fetchone()
-
-    def _query_estabelecimento(self, cursor, cnpj_basico, cnpj_ordem, cnpj_dv):
-        cursor.execute(
-            """
-            SELECT
-                cnpj_ordem, cnpj_dv, matriz_filial, nome_fantasia,
-                situacao_cadastral, data_situacao_cadastral,
-                motivo_situacao_cadastral, nome_cidade_exterior,
-                pais, data_inicio_atividades, cnae_fiscal,
-                cnae_fiscal_secundaria, tipo_logradouro,
-                logradouro, numero, complemento, bairro, cep,
-                uf, municipio, ddd1, telefone1, ddd2, telefone2,
-                ddd_fax, fax, correio_eletronico,
-                situacao_especial, data_situacao_especial
-            FROM estabelecimento
-            WHERE cnpj_basico = ?
-              AND cnpj_ordem = ?
-              AND cnpj_dv    = ?;
-        """,
-            (cnpj_basico, cnpj_ordem, cnpj_dv),
-        )
-        return cursor.fetchone()
-
     def _query_simples(self, cursor, cnpj_basico):
         cursor.execute(
             """
@@ -158,21 +169,6 @@ class CNPJSearchView(APIView):
             (cnpj_basico,),
         )
         return cursor.fetchone()
-
-    def _query_socios(self, cursor, cnpj_basico):
-        cursor.execute(
-            """
-            SELECT
-                nome_socio, cnpj_cpf_socio, qualificacao_socio,
-                data_entrada_sociedade, pais, representante_legal,
-                nome_representante, qualificacao_representante_legal,
-                faixa_etaria
-            FROM socios
-            WHERE cnpj_basico = ?;
-        """,
-            (cnpj_basico,),
-        )
-        return cursor.fetchall()
 
     def _get_description(self, cursor, table_name, code):
         if code is None:
@@ -334,9 +330,12 @@ class CNPJSearchView(APIView):
             return []
 
         # Step 1: Collect all unique partner names
-        partner_names = list(set([socio[0] for socio in socios_data]))
+        partner_names = list(set([socio[0] for socio in socios_data if socio[0] is not None]))
 
         # Step 2: Fetch all potential CPF matches for these names in one query
+        if not partner_names:
+            return []
+            
         query = f"""
             SELECT cpf, sexo, nasc, nome
             FROM cpf
@@ -410,8 +409,6 @@ class CNPJSearchView(APIView):
         if len(cpf_digits) != 11:
             return ""
         return f"***{cpf_digits[3:9]}**"
-
-    
 
     def _assemble_json(self, cnpj_digits, empresa, estabelecimento, simples, socios):
         # Mapping for porte_empresa is now handled in _enrich_empresa_data

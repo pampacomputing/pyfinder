@@ -91,7 +91,7 @@ export default {
     if (criteria.cnpj) params.cnpj = criteria.cnpj; // Add CNPJ parameter
     if (criteria.name) params.name = criteria.name;
 
-    return apiClient.get('/search/', { params: params });
+    return apiClient.get('/cpf/search/', { params: params });
   },
   login(credentials) {
     return apiClient.post('/auth/login/', credentials);
@@ -103,6 +103,6 @@ export default {
     return apiClient.post('/cnpj/search/', data);
   },
   getCompaniesByName(name, cpf) {
-    return apiClient.get(`/get_companies_by_name/?name=${name}&cpf=${cpf}`);
+    return apiClient.get(`/cpf/get_companies_by_name/?name=${name}&cpf=${cpf}`);
   },
 };

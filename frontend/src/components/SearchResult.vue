@@ -27,6 +27,7 @@
                     <tr
                       @click="emit('getAssociatedCompanies', result.name, result.cpf)"
                       :class="{ 'table-active': selectedCpfResult && selectedCpfResult.name === result.name }"
+                      class="cpf-row"
                     >
                       <td>{{ (cpfPage - 1) * perPage + idx + 1 }}</td>
                       <td>{{ formatCpf(result.cpf) }}</td>
@@ -311,6 +312,9 @@ const formatGender = (genderCode) => {
   z-index: 2;
 }
 .company-row {
+  cursor: pointer;
+}
+.cpf-row {
   cursor: pointer;
 }
 </style>
