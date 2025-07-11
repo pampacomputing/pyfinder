@@ -18,7 +18,16 @@ To get started, run the setup script for your operating system. This will instal
     ./setup.sh
     ```
 
-### 2. Start the Application
+
+### 2. Configure .env
+
+Then, it is necessary to configure the .env file with: 
+-   **Dabatase Directory**
+    ```bash
+    DB_DIR=C:\Users\danie\Documents\gerson\db
+    ```
+
+### 3. Start the Application
 
 After the setup is complete, run the start script for your operating system. This will launch the backend and frontend servers in separate terminal windows.
 
@@ -32,7 +41,7 @@ After the setup is complete, run the start script for your operating system. Thi
     ./start.sh
     ```
 
-### 3. Access the Application
+### 4. Access the Application
 
 Once the servers are running, you can access the PyFinder application in your web browser by navigating to:
 
