@@ -425,8 +425,11 @@ class CNPJSearchView(APIView):
                 "natureza_juridica": empresa.get("natureza_juridica"),
                 "porte": empresa.get("porte"),
                 "capital_social": empresa.get("capital_social"),
+                "data_inicio_atividades": estabelecimento.get("data_inicio_atividades"),
+                "matriz_filial": estabelecimento.get("matriz_filial"),
                 "simples": simples,
                 "endereco": {
+                    "tipo_logradouro": estabelecimento.get("tipo_logradouro"),
                     "logradouro": estabelecimento.get("logradouro"),
                     "numero": estabelecimento.get("numero"),
                     "complemento": estabelecimento.get("complemento"),
@@ -434,6 +437,7 @@ class CNPJSearchView(APIView):
                     "cep": estabelecimento.get("cep"),
                     "uf": estabelecimento.get("uf"),
                     "municipio": estabelecimento.get("municipio"),
+                    "pais": estabelecimento.get("pais"),
                 },
                 "atividades": {
                     "cnae_principal": estabelecimento.get("cnae_principal"),

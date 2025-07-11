@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Cpf
+from apps.cpf_search.models import Cpf
 from dj_rest_auth.registration.serializers import RegisterSerializer
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError

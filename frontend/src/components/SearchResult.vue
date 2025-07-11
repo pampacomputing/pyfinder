@@ -62,7 +62,7 @@
                                       <tbody>
                                         <tr><th>Legal Nature</th><td>{{ company.natureza_juridica }}</td></tr>
                                         <tr><th>Size</th><td>{{ company.porte }}</td></tr>
-                                        <tr><th>Capital Stock</th><td>{{ company.capital_social }}</td></tr>
+                                        <tr><th>Capital Stock</th><td>{{ formatCurrency(company.capital_social) }}</td></tr>
                                         <tr><th>Registration Status</th><td>{{ company.situacao_cadastral }}</td></tr>
                                         <tr><th>Registration Date</th><td>{{ formatDate(company.data_situacao_cadastral) }}</td></tr>
                                         <tr><th>Registration Reason</th><td>{{ company.motivo_situacao_cadastral }}</td></tr>
@@ -128,6 +128,8 @@
                     <th>Registration Status</th>
                     <th>Registration Date</th>
                     <th>Registration Status Reason</th>
+                    <th>Start of Activities</th>
+                    <th>Branch Type</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -135,12 +137,14 @@
                     <td>{{ formatCnpj(results.cnpj) }}</td>
                     <td>{{ results.empresa.razao_social }}</td>
                     <td>{{ results.empresa.nome_fantasia }}</td>
-                    <td>{{ results.empresa.natureza_juridica.descricao }}</td>
+                    <td>{{ results.empresa.natureza_juridica.descricao }} ({{ results.empresa.natureza_juridica.codigo }})</td>
                     <td>{{ results.empresa.porte }}</td>
-                    <td>{{ results.empresa.capital_social }}</td>
-                    <td>{{ results.empresa.situacao_cadastral.descricao }}</td>
+                    <td>{{ formatCurrency(results.empresa.capital_social) }}</td>
+                    <td>{{ results.empresa.situacao_cadastral.descricao }} ({{ results.empresa.situacao_cadastral.codigo }})</td>
                     <td>{{ formatDate(results.empresa.situacao_cadastral.data) }}</td>
-                    <td>{{ results.empresa.situacao_cadastral.motivo.descricao }}</td>
+                    <td>{{ results.empresa.situacao_cadastral.motivo.descricao }} ({{ results.empresa.situacao_cadastral.motivo.codigo }})</td>
+                    <td>{{ formatDate(results.empresa.data_inicio_atividades) }}</td>
+                    <td>{{ results.empresa.matriz_filial }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -154,6 +158,7 @@
               <table class="table table-dark table-striped table-hover m-0">
                 <thead>
                   <tr>
+                    <th>Street Type</th>
                     <th>Street</th>
                     <th>Number</th>
                     <th>Complement</th>
@@ -161,17 +166,102 @@
                     <th>City</th>
                     <th>State</th>
                     <th>ZIP Code</th>
+                    <th>Country</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr>
+                    <td>{{ results.empresa.endereco.tipo_logradouro }}</td>
                     <td>{{ results.empresa.endereco.logradouro }}</td>
                     <td>{{ results.empresa.endereco.numero }}</td>
                     <td>{{ results.empresa.endereco.complemento }}</td>
                     <td>{{ results.empresa.endereco.bairro }}</td>
-                    <td>{{ results.empresa.endereco.municipio.descricao }}</td>
+                    <td>{{ results.empresa.endereco.municipio.descricao }} ({{ results.empresa.endereco.municipio.codigo }})</td>
                     <td>{{ results.empresa.endereco.uf }}</td>
                     <td>{{ results.empresa.endereco.cep }}</td>
+                    <td>{{ results.empresa.endereco.pais.descricao }} ({{ results.empresa.endereco.pais.codigo }})</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- CNPJ Activities Data -->
+          <div v-if="results.empresa && results.empresa.atividades" class="mt-4">
+            <h5 class="card-title p-3">Activities (CNAE)</h5>
+            <div class="table-container table-responsive">
+              <table class="table table-dark table-striped table-hover m-0">
+                <thead>
+                  <tr>
+                    <th>Type</th>
+                    <th>Code</th>
+                    <th>Description</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Primary</td>
+                    <td>{{ results.empresa.atividades.cnae_principal.codigo }}</td>
+                    <td>{{ results.empresa.atividades.cnae_principal.descricao }}</td>
+                  </tr>
+                  <tr v-for="(cnae, index) in results.empresa.atividades.cnae_secundarias" :key="index">
+                    <td>Secondary</td>
+                    <td>{{ cnae.codigo }}</td>
+                    <td>{{ cnae.descricao }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- CNPJ Contact Data -->
+          <div v-if="results.empresa && results.empresa.contato" class="mt-4">
+            <h5 class="card-title p-3">Contact</h5>
+            <div class="table-container table-responsive">
+              <table class="table table-dark table-striped table-hover m-0">
+                <thead>
+                  <tr>
+                    <th>Email</th>
+                    <th>Phone 1</th>
+                    <th>Phone 2</th>
+                    <th>Fax</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>{{ results.empresa.contato.email }}</td>
+                    <td>{{ results.empresa.contato.telefone1 }}</td>
+                    <td>{{ results.empresa.contato.telefone2 }}</td>
+                    <td>{{ results.empresa.contato.fax }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- CNPJ Simples/MEI Data -->
+          <div v-if="results.empresa && results.empresa.simples" class="mt-4">
+            <h5 class="card-title p-3">Simples Nacional / MEI</h5>
+            <div class="table-container table-responsive">
+              <table class="table table-dark table-striped table-hover m-0">
+                <thead>
+                  <tr>
+                    <th>Optante Simples</th>
+                    <th>Data Opção Simples</th>
+                    <th>Data Exclusão Simples</th>
+                    <th>Optante MEI</th>
+                    <th>Data Opção MEI</th>
+                    <th>Data Exclusão MEI</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>{{ results.empresa.simples.opcao_simples ? 'Yes' : 'No' }}</td>
+                    <td>{{ formatDate(results.empresa.simples.data_opcao_simples) }}</td>
+                    <td>{{ formatDate(results.empresa.simples.data_exclusao_simples) }}</td>
+                    <td>{{ results.empresa.simples.opcao_mei ? 'Yes' : 'No' }}</td>
+                    <td>{{ formatDate(results.empresa.simples.data_opcao_mei) }}</td>
+                    <td>{{ formatDate(results.empresa.simples.data_exclusao_mei) }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -204,12 +294,12 @@
                     <td>{{ partner.nome }}</td>
                     <td>{{ formatGender(partner.sexo) }}</td>
                     <td>{{ formatDate(partner.data_nascimento) }}</td>
-                    <td>{{ partner.qualificacao_socio.descricao }}</td>
+                    <td>{{ partner.qualificacao_socio.descricao }} ({{ partner.qualificacao_socio.codigo }})</td>
                     <td>{{ formatDate(partner.data_entrada_sociedade) }}</td>
-                    <td>{{ partner.pais.descricao }}</td>
+                    <td>{{ partner.pais.descricao }} ({{ partner.pais.codigo }})</td>
                     <td>{{ partner.representante_legal }}</td>
                     <td>{{ partner.nome_representante }}</td>
-                    <td>{{ partner.qualificacao_representante_legal.descricao }}</td>
+                    <td>{{ partner.qualificacao_representante_legal.descricao }} ({{ partner.qualificacao_representante_legal.codigo }})</td>
                     <td>{{ partner.faixa_etaria }}</td>
                   </tr>
                 </tbody>
@@ -298,6 +388,16 @@ const formatGender = (genderCode) => {
   if (genderCode === 'M') return 'Male';
   if (genderCode === 'F') return 'Female';
   return genderCode;
+};
+
+const formatCurrency = (value) => {
+  if (value === null || value === undefined) return '';
+  const number = Number(value.toString().replace(',', '.'));
+  if (isNaN(number)) return value;
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  }).format(number);
 };
 </script>
 

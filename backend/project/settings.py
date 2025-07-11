@@ -29,7 +29,7 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", "False").lower() in ("true", "1", "t")
 
-ALLOWED_HOSTS = ["127.0.0.1", "192.168.1.100", "0.0.0.0", "localhost", "192.168.1.103", "192.168.1.106", ""]
+ALLOWED_HOSTS = ["127.0.0.1", "192.168.1.100", "0.0.0.0", "localhost", "192.168.1.103", "192.168.1.106", "192.168.206.1"]
 
 
 # Application definition
@@ -154,6 +154,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
+    "http://192.168.206.1:5173",
     "http://192.168.1.103:5173",
     "http://0.0.0.0:5173",
 ]

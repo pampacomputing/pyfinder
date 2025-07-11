@@ -3,9 +3,8 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from .models import Cpf
-from .serializers import CpfSerializer
+from project.serializers import CpfSerializer
 from django.db.models import Q
-import sqlite3
 from django.conf import settings
 import re
 
