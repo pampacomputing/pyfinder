@@ -130,6 +130,10 @@
                     <th>Registration Status Reason</th>
                     <th>Start of Activities</th>
                     <th>Branch Type</th>
+                    <th>Responsible Entity</th>
+                    <th>Responsible Qualification</th>
+                    <th>Special Situation</th>
+                    <th>Special Situation Date</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -145,6 +149,10 @@
                     <td>{{ results.empresa.situacao_cadastral.motivo.descricao }} ({{ results.empresa.situacao_cadastral.motivo.codigo }})</td>
                     <td>{{ formatDate(results.empresa.data_inicio_atividades) }}</td>
                     <td>{{ results.empresa.matriz_filial }}</td>
+                    <td>{{ results.empresa.ente_federativo_responsavel }}</td>
+                    <td>{{ results.empresa.qualificacao_responsavel.descricao }} ({{ results.empresa.qualificacao_responsavel.codigo }})</td>
+                    <td>{{ results.empresa.situacao_especial }}</td>
+                    <td>{{ formatDate(results.empresa.data_situacao_especial) }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -167,6 +175,7 @@
                     <th>State</th>
                     <th>ZIP Code</th>
                     <th>Country</th>
+                    <th>City Abroad</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -180,6 +189,7 @@
                     <td>{{ results.empresa.endereco.uf }}</td>
                     <td>{{ results.empresa.endereco.cep }}</td>
                     <td>{{ results.empresa.endereco.pais.descricao }} ({{ results.empresa.endereco.pais.codigo }})</td>
+                    <td>{{ results.empresa.endereco.nome_cidade_exterior }}</td>
                   </tr>
                 </tbody>
               </table>
