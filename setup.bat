@@ -36,7 +36,7 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-:: 4. Copy and configure .env file
+:: 5. Copy and configure .env file
 if not exist "%BASE_DIR%.env" (
     echo Creating .env file from .env.example...
     copy "%BASE_DIR%.env.example" "%BASE_DIR%.env"
@@ -44,7 +44,7 @@ if not exist "%BASE_DIR%.env" (
     echo .env file already exists.
 )
 
-:: 5. Install frontend dependencies
+:: 6. Install frontend dependencies
 echo Installing frontend dependencies...
 pushd "%BASE_DIR%frontend"
 npm install

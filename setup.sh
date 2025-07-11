@@ -11,10 +11,10 @@ source backend/.venv/bin/activate
 # 3. Install Python dependencies
 pip install -r backend/requirements.txt
 
-# 4. Copy and configure .env file
+# 5. Copy and configure .env file
 cp .env.example .env
 
-# 5. Install frontend dependencies
+# 6. Install frontend dependencies
 pushd frontend > /dev/null
 npm install
 popd > /dev/null
